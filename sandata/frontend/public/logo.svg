@@ -1,0 +1,24 @@
+<svg width="520" height="190" viewBox="0 0 520 190" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">SanData</title>
+  <desc id="desc">Pixel shield logo with SanData wordmark.</desc>
+  <rect width="520" height="190" fill="none"/>
+  <g shape-rendering="crispEdges">
+    <path d="M74 22h64v12h24v70h-12v24h-12v12h-12v12H86v-12H74v-12H62v-24H50V34h24V22Z" fill="#3C2177"/>
+    <path d="M62 34h12V22h64v12h24v70h-12v24h-12v12h-12v12H86v-12H74v-12H62v-24H50V34h12Zm12 12v56h12v24h12v12h16v-12h12v-24h12V46h-16V34H90v12H74Z" fill="#8B7AE6"/>
+    <path d="M86 58h16V42h24v16h16v50H86V58Z" fill="#FFC857"/>
+    <path d="M98 58h12V50h8v8h12v14h-8V62h-16v10h-8V58Z" fill="#EDE6FF"/>
+    <rect x="106" y="78" width="16" height="18" fill="#3C2177"/>
+    <rect x="110" y="94" width="8" height="8" fill="#3C2177"/>
+    <path d="M74 86h-18v-6h18v6Zm82 0h-18v-6h18v6Zm-62-14H78v-6h16v6Zm56 0h-16v-6h16v6Zm-64 30H70v-6h16v6Zm72 0h-16v-6h16v6Z" fill="#7FD6C9"/>
+    <path d="M116 10h16v16h-16V10Zm0 136h16v16h-16v-16ZM42 30h16v16H42V30Zm112 0h16v16h-16V30Z" fill="#FFB703"/>
+  </g>
+  <g shape-rendering="crispEdges">
+    <text x="192" y="91" font-family="'Press Start 2P', monospace" font-size="42" fill="#3C2177">SanData</text>
+    <text x="196" y="95" font-family="'Press Start 2P', monospace" font-size="42" fill="#8B7AE6" opacity="0.45">SanData</text>
+    <rect x="196" y="126" width="56" height="4" fill="#7FD6C9"/>
+    <rect x="268" y="126" width="82" height="4" fill="#7FD6C9"/>
+    <rect x="366" y="126" width="56" height="4" fill="#7FD6C9"/>
+    <rect x="252" y="122" width="8" height="8" fill="#FFB703"/>
+    <rect x="350" y="122" width="8" height="8" fill="#FFB703"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+{
+  "name": "sandata",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SanData gamified cybersecurity awareness monorepo",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "backend": "npm run dev --workspace backend",
+    "frontend": "npm run dev --workspace frontend",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "seed": "npm run seed --workspace backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "next": "^15.5.6",
+    "npm": "^11.15.0"
+  }
+}
