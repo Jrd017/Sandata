@@ -90,15 +90,15 @@ function applyLocalBattleResult(user: User | null, xpAwarded: number, scorePerce
 function HealthMeter({ current, max, tone }: { current: number; max: number; tone: 'green' | 'red' }) {
   const percent = Math.round((Math.max(0, current) / Math.max(max, 1)) * 100);
   return (
-    <div className="grid grid-cols-[32px_1fr_auto] items-center gap-3">
-      <span className="font-pixel text-[15px] text-white">HP</span>
-      <div className="pixel-health-track h-7 overflow-hidden">
+    <div className="grid grid-cols-[28px_1fr_auto] items-center gap-2">
+      <span className="font-pixel text-[12px] text-white">HP</span>
+      <div className="pixel-health-track h-5 overflow-hidden">
         <div
           className={tone === 'red' ? 'pixel-health-fill pixel-health-fill-danger' : 'pixel-health-fill'}
           style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
         />
       </div>
-      <span className="font-pixel text-[13px] text-white">{Math.max(0, current)} / {max}</span>
+      <span className="font-pixel text-[10px] text-white">{Math.max(0, current)} / {max}</span>
     </div>
   );
 }
@@ -116,9 +116,10 @@ function EnemyCard({
     <button
       type="button"
       onClick={onSelect}
+      aria-pressed={selected}
       className={cn(
-        'pixel-panel grid min-h-[250px] gap-3 p-4 text-left transition hover:-translate-y-1',
-        selected && 'shadow-[0_0_0_3px_#ffd45c,inset_0_0_0_2px_rgba(255,212,92,0.22),0_12px_0_rgba(0,0,0,0.22)]',
+        'pixel-panel relative grid min-h-[250px] gap-3 overflow-hidden p-4 text-left transition hover:-translate-y-1',
+        selected && 'bg-[#211329] shadow-[0_0_0_4px_#ffd45c,inset_0_0_0_2px_rgba(255,212,92,0.28),0_12px_0_rgba(0,0,0,0.22)]',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -126,7 +127,11 @@ function EnemyCard({
           <h3 className="font-pixel text-[12px] leading-6 text-white">{enemy.name}</h3>
           <p className="mt-1 text-xs font-black uppercase text-gold">{enemy.title}</p>
         </div>
-        <Image src={ui.shieldLogo} alt="" width={40} height={40} loading="eager" className="h-9 w-9 object-contain" />
+        {selected ? (
+          <span className="border-2 border-[#0b0610] bg-[#ffd45c] px-2 py-1 font-pixel text-[8px] leading-4 text-[#241025] shadow-[0_0_0_2px_#9b6427]">Selected</span>
+        ) : (
+          <Image src={ui.shieldLogo} alt="" width={40} height={40} loading="eager" className="h-9 w-9 object-contain" />
+        )}
       </div>
       <div className="grid h-32 place-items-center">
         <Image src={enemy.image} alt="" width={170} height={160} className="max-h-32 w-auto scale-x-[-1] object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.48)]" />
@@ -435,59 +440,61 @@ export default function BattlefieldPage() {
       className="pixel-page min-h-screen overflow-hidden bg-cover bg-center px-3 py-4"
       style={{ backgroundImage: `linear-gradient(180deg, rgba(4, 5, 7, 0.18), rgba(4, 5, 7, 0.3)), url(${ui.backgrounds.battlefield})` }}
     >
-      <section className="pixel-screen-border relative mx-auto min-h-[calc(100dvh-2rem)] max-w-[1800px] overflow-hidden bg-transparent">
+      <section className="pixel-screen-border relative mx-auto min-h-[calc(100dvh-2rem)] max-w-[1500px] overflow-hidden bg-transparent">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.16))]" />
-        <div className="relative z-10 grid min-h-[calc(100dvh-2rem)] grid-rows-[auto_1fr_auto] px-4 py-4 sm:px-8">
-          <header className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px_minmax(0,1fr)] lg:items-start">
-            <section className="pixel-panel grid grid-cols-[94px_1fr] items-center gap-4 p-3">
-              <div className="pixel-panel-light grid h-24 w-24 place-items-center overflow-hidden p-1">
-                <Image src={avatarIconImage(activeUser.avatar)} alt="" width={86} height={100} className="h-24 w-auto object-contain" />
+        <div className="relative z-10 grid min-h-[calc(100dvh-2rem)] grid-rows-[auto_1fr_auto] px-3 py-3 sm:px-6">
+          <header className="relative grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px_minmax(0,1fr)] lg:items-start">
+            <section className="pixel-panel grid grid-cols-[78px_1fr] items-center gap-3 p-2">
+              <div className="pixel-panel-light grid h-20 w-20 place-items-center overflow-hidden p-1">
+                <Image src={avatarIconImage(activeUser.avatar)} alt="" width={82} height={96} className="h-20 w-auto object-contain" />
               </div>
               <div>
-                <h1 className="font-pixel text-xl leading-8 text-white">Shield Agent</h1>
-                <div className="mt-3">
+                <h1 className="font-pixel text-base leading-7 text-white">Shield Agent</h1>
+                <div className="mt-2">
                   <HealthMeter current={playerHP} max={playerMaxHP} tone="green" />
                 </div>
               </div>
             </section>
 
-            <div className="grid justify-center">
-              <Image src={ui.logo} alt="SanData Quiz Fight" width={390} height={160} priority className="h-auto w-[290px] object-contain sm:w-[360px]" />
+            <div className="grid justify-center justify-items-center">
+              <Image src={ui.logo} alt="SanData Quiz Fight" width={320} height={130} priority className="h-auto w-[220px] object-contain sm:w-[270px]" />
+              <MusicToggle className="mt-2 scale-90" src={ui.audio.battlefield} label="Battle Music" />
             </div>
 
-            <section className="pixel-panel grid grid-cols-[1fr_104px] items-center gap-4 p-3">
+            <section className="pixel-panel grid grid-cols-[1fr_82px] items-center gap-3 p-2">
               <div>
-                <h2 className="text-right font-pixel text-xl leading-8 text-white">{enemy.name}</h2>
-                <div className="mt-3">
+                <p className="text-right font-pixel text-[8px] uppercase leading-4 text-gold">Selected Enemy</p>
+                <h2 className="text-right font-pixel text-base leading-7 text-white">{enemy.name}</h2>
+                <div className="mt-2">
                   <HealthMeter current={enemyHP} max={enemy.maxHP} tone="red" />
                 </div>
               </div>
-              <div className="pixel-panel-light grid h-24 w-24 place-items-center overflow-hidden p-1">
-                <Image src={enemy.image} alt="" width={106} height={106} className="h-24 w-auto scale-x-[-1] object-contain" />
+              <div className="pixel-panel-light grid h-20 w-20 place-items-center overflow-hidden p-1">
+                <Image src={enemy.image} alt="" width={96} height={96} className="h-20 w-auto scale-x-[-1] object-contain" />
               </div>
             </section>
           </header>
 
-          <section className="relative grid min-h-[430px] items-end py-6">
-            <div className="absolute left-2 top-8 hidden w-32 border-4 border-[#0b0610] bg-[#3b185d] px-4 py-6 text-center shadow-[0_0_0_2px_#d89824] xl:block">
-              <p className="font-pixel text-[13px] leading-7 text-gold">SanData</p>
-              <Image src={ui.shieldLogo} alt="" width={90} height={90} className="mx-auto mt-4 h-20 w-20 object-contain" />
+          <section className="relative grid min-h-[345px] items-end py-3">
+            <div className="absolute left-2 top-7 hidden w-28 border-4 border-[#0b0610] bg-[#3b185d] px-3 py-4 text-center shadow-[0_0_0_2px_#d89824] xl:block">
+              <p className="font-pixel text-[10px] leading-6 text-gold">SanData</p>
+              <Image src={ui.shieldLogo} alt="" width={74} height={74} className="mx-auto mt-3 h-16 w-16 object-contain" />
             </div>
-            <div className="absolute right-2 top-8 hidden w-32 border-4 border-[#0b0610] bg-[#3b185d] px-4 py-6 text-center shadow-[0_0_0_2px_#d89824] xl:block">
-              <p className="font-pixel text-[13px] leading-8 text-gold">Think Before You Click!</p>
-            </div>
-
-            <div className="absolute left-1/2 top-4 z-20 w-[min(520px,88vw)] -translate-x-1/2 border-4 border-[#0b0610] bg-[#fff1d2] px-5 py-4 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
-              <p className="font-pixel text-[12px] leading-6 sm:text-[13px] sm:leading-7">{question.questionText}</p>
+            <div className="absolute right-2 top-7 hidden w-28 border-4 border-[#0b0610] bg-[#3b185d] px-3 py-4 text-center shadow-[0_0_0_2px_#d89824] xl:block">
+              <p className="font-pixel text-[10px] leading-7 text-gold">Think Before You Click!</p>
             </div>
 
-            <div className="absolute left-[16%] top-24 z-20 hidden w-[min(470px,32vw)] lg:block">
-              <div className="pixel-panel min-h-20 p-4">
-                <p className="font-pixel text-[11px] leading-6 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
+            <div className="absolute left-1/2 top-2 z-20 w-[min(430px,86vw)] -translate-x-1/2 border-4 border-[#0b0610] bg-[#fff1d2] px-4 py-3 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
+              <p className="font-pixel text-[10px] leading-5 sm:text-[11px] sm:leading-6">{question.questionText}</p>
+            </div>
+
+            <div className="absolute left-[15%] top-20 z-20 hidden w-[min(390px,30vw)] lg:block">
+              <div className="pixel-panel min-h-16 p-3">
+                <p className="font-pixel text-[10px] leading-5 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
               </div>
             </div>
 
-            <div className="battle-duel-grid mx-auto w-full max-w-5xl">
+            <div className="battle-duel-grid mx-auto w-full max-w-4xl">
               <div className="battle-fighter-slot battle-fighter-slot-player">
                 <div className="battle-fighter-stage">
                   <Image
@@ -556,10 +563,10 @@ export default function BattlefieldPage() {
                         type="button"
                         disabled={selectedAnswer !== null}
                         onClick={() => choose(optionIndex)}
-                        className={cn('grid min-h-[116px] grid-cols-[72px_1fr] items-center gap-4 border-4 p-4 text-left shadow-[0_0_0_2px_#9b6427,inset_0_0_0_2px_rgba(255,224,101,0.12)] transition hover:-translate-y-1 disabled:cursor-default', state)}
+                        className={cn('grid min-h-[84px] grid-cols-[56px_1fr] items-center gap-3 border-4 p-3 text-left shadow-[0_0_0_2px_#9b6427,inset_0_0_0_2px_rgba(255,224,101,0.12)] transition hover:-translate-y-1 disabled:cursor-default', state)}
                       >
-                        <span className="grid h-16 w-16 place-items-center border-4 border-[#0b0610] bg-[#5c2587] font-pixel text-3xl text-white shadow-[0_0_0_2px_#d89824]">{String.fromCharCode(65 + optionIndex)}.</span>
-                        <span className="font-pixel text-lg leading-8">{option}</span>
+                        <span className="grid h-12 w-12 place-items-center border-4 border-[#0b0610] bg-[#5c2587] font-pixel text-2xl text-white shadow-[0_0_0_2px_#d89824]">{String.fromCharCode(65 + optionIndex)}.</span>
+                        <span className="font-pixel text-[13px] leading-6">{option}</span>
                       </button>
                     );
                   })}
@@ -567,7 +574,7 @@ export default function BattlefieldPage() {
 
                 <div className="mt-4 grid items-center gap-3 lg:grid-cols-[1fr_auto_1fr]">
                   <Link href="/dashboard" className="pixel-button-gold px-4 py-3 text-center text-[10px]">Command Center</Link>
-                  <div className="pixel-panel mx-auto px-8 py-3 font-pixel text-[13px] text-gold">
+                  <div className="pixel-panel mx-auto px-6 py-3 font-pixel text-[11px] text-gold">
                     Defend. Think. Protect.
                   </div>
                   {selectedAnswer !== null ? (

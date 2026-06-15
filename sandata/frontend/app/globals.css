@@ -276,8 +276,8 @@ input:focus-visible {
 }
 
 .battle-duel-grid {
-  min-height: clamp(320px, 43vh, 470px);
-  padding-top: 5rem;
+  min-height: clamp(245px, 34vh, 360px);
+  padding-top: 3.75rem;
 }
 
 .battle-fighter-slot {
@@ -298,8 +298,8 @@ input:focus-visible {
 .battle-fighter-stage {
   position: relative;
   display: grid;
-  height: clamp(220px, 25vw, 340px);
-  width: clamp(220px, 25vw, 340px);
+  height: clamp(160px, 18vw, 250px);
+  width: clamp(160px, 18vw, 250px);
   place-items: end center;
 }
 
@@ -351,15 +351,15 @@ input:focus-visible {
   position: relative;
   align-self: center;
   justify-self: center;
-  height: 88px;
-  width: 88px;
+  height: 68px;
+  width: 68px;
   filter: drop-shadow(4px 4px 0 #08050c);
 }
 
 .battle-clash::before {
   content: "";
   position: absolute;
-  inset: 18px;
+  inset: 13px;
   border: 4px solid #ffd45c;
   background: rgba(62, 24, 91, 0.72);
   box-shadow:
@@ -372,8 +372,8 @@ input:focus-visible {
   position: absolute;
   left: 50%;
   top: 50%;
-  height: 7px;
-  width: 76px;
+  height: 6px;
+  width: 60px;
   border: 2px solid #08050c;
   background: linear-gradient(90deg, transparent 0 8%, #ffd45c 8% 82%, #fff7d7 82% 100%);
   transform-origin: center;
@@ -414,10 +414,10 @@ input:focus-visible {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   42% {
-    transform: translateX(52px) translateY(-8px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+    transform: translateX(38px) translateY(-6px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   58% {
-    transform: translateX(38px) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+    transform: translateX(28px) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   100% {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
@@ -429,10 +429,10 @@ input:focus-visible {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   42% {
-    transform: translateX(-52px) translateY(-8px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+    transform: translateX(-38px) translateY(-6px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   58% {
-    transform: translateX(-38px) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+    transform: translateX(-28px) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
   100% {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
@@ -681,8 +681,8 @@ input:focus-visible {
   }
 
   .battle-duel-grid {
-    min-height: 560px;
-    padding-top: 6rem;
+    min-height: 470px;
+    padding-top: 5rem;
   }
 
   .battle-fighter-slot-player,
@@ -691,8 +691,8 @@ input:focus-visible {
   }
 
   .battle-fighter-stage {
-    height: 210px;
-    width: 210px;
+    height: 178px;
+    width: 178px;
   }
 
   .battle-clash {

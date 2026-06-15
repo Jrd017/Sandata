@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 interface MusicToggleProps {
+  autoPlay?: boolean;
   className?: string;
+  defaultVolume?: VolumeMode;
   label: string;
   src: string;
 }
@@ -13,8 +15,8 @@ interface MusicToggleProps {
 type VolumeMode = 'low' | 'high';
 
 const volumeLevels: Record<VolumeMode, number> = {
-  low: 0.38,
-  high: 0.82,
+  low: 0.52,
+  high: 1,
 };
 
 function createEightBitCurve(bits = 5) {
@@ -30,13 +32,14 @@ function createEightBitCurve(bits = 5) {
   return curve;
 }
 
-export function MusicToggle({ className, label, src }: MusicToggleProps) {
+export function MusicToggle({ autoPlay = true, className, defaultVolume = 'high', label, src }: MusicToggleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [volumeMode, setVolumeMode] = useState<VolumeMode>('high');
+  const [volumeMode, setVolumeMode] = useState<VolumeMode>(defaultVolume);
+  const volumeModeRef = useRef<VolumeMode>(defaultVolume);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -49,11 +52,12 @@ export function MusicToggle({ className, label, src }: MusicToggleProps) {
   useEffect(() => {
     const audio = audioRef.current;
     const volume = volumeLevels[volumeMode];
+    volumeModeRef.current = volumeMode;
     if (gainRef.current) gainRef.current.gain.value = volume;
     if (audio) audio.volume = gainRef.current ? 1 : volume;
   }, [volumeMode]);
 
-  function setupEightBitAudio(audio: HTMLAudioElement) {
+  const setupEightBitAudio = useCallback((audio: HTMLAudioElement) => {
     if (typeof window === 'undefined') return;
     const AudioContextConstructor = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextConstructor) return;
@@ -70,7 +74,7 @@ export function MusicToggle({ className, label, src }: MusicToggleProps) {
       lowPass.type = 'lowpass';
       lowPass.frequency.value = 6200;
       lowPass.Q.value = 0.7;
-      gain.gain.value = volumeLevels[volumeMode];
+      gain.gain.value = volumeLevels[volumeModeRef.current];
 
       source.connect(bitCrusher);
       bitCrusher.connect(lowPass);
@@ -85,14 +89,65 @@ export function MusicToggle({ className, label, src }: MusicToggleProps) {
     }
 
     audioContextRef.current.resume().catch(() => undefined);
-  }
+  }, []);
+
+  const playAudio = useCallback(async (enhance = false) => {
+    const audio = audioRef.current;
+    if (!audio) return false;
+
+    audio.volume = gainRef.current ? 1 : volumeLevels[volumeModeRef.current];
+    audio.loop = true;
+
+    try {
+      if (enhance) setupEightBitAudio(audio);
+      await audioContextRef.current?.resume();
+      await audio.play();
+      setPlaying(true);
+      return true;
+    } catch {
+      setPlaying(false);
+      return false;
+    }
+  }, [setupEightBitAudio]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return undefined;
+
+    audio.loop = true;
+    audio.volume = gainRef.current ? 1 : volumeLevels[volumeModeRef.current];
+    setPlaying(false);
+
+    if (!autoPlay) return undefined;
+
+    let cancelled = false;
+    const retry = () => {
+      if (!cancelled) void playAudio(true);
+    };
+
+    void playAudio(false).then((started) => {
+      if (started || cancelled || typeof window === 'undefined') return;
+      window.addEventListener('pointerdown', retry, { once: true });
+      window.addEventListener('mousedown', retry, { once: true });
+      window.addEventListener('click', retry, { once: true });
+      window.addEventListener('touchstart', retry, { once: true });
+      window.addEventListener('keydown', retry, { once: true });
+    });
+
+    return () => {
+      cancelled = true;
+      audio.pause();
+      window.removeEventListener('pointerdown', retry);
+      window.removeEventListener('mousedown', retry);
+      window.removeEventListener('click', retry);
+      window.removeEventListener('touchstart', retry);
+      window.removeEventListener('keydown', retry);
+    };
+  }, [autoPlay, playAudio, src]);
 
   async function toggle() {
     const audio = audioRef.current;
     if (!audio) return;
-
-    audio.volume = gainRef.current ? 1 : volumeLevels[volumeMode];
-    audio.loop = true;
 
     if (playing) {
       audio.pause();
@@ -100,19 +155,21 @@ export function MusicToggle({ className, label, src }: MusicToggleProps) {
       return;
     }
 
-    try {
-      setupEightBitAudio(audio);
-      await audioContextRef.current?.resume();
-      await audio.play();
-      setPlaying(true);
-    } catch {
-      setPlaying(false);
-    }
+    await playAudio(true);
   }
 
   return (
     <div className={cn('music-toggle', className)}>
-      <audio ref={audioRef} src={src} preload="none" />
+      <audio
+        ref={audioRef}
+        src={src}
+        autoPlay={autoPlay}
+        loop
+        muted={false}
+        preload="auto"
+        onPause={() => setPlaying(false)}
+        onPlay={() => setPlaying(true)}
+      />
       <button
         type="button"
         onClick={toggle}
