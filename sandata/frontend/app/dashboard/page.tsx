@@ -125,28 +125,22 @@ export default function DashboardPage() {
               <div className="mb-3 flex justify-center">
                 <h2 className="pixel-title-ribbon px-10 py-2 text-[13px] leading-6">Battle Readiness</h2>
               </div>
-              <div className="grid min-h-[310px] grid-cols-[1fr_auto_1fr] items-end gap-2 bg-[#07101b]/58 px-3 py-4">
+              <div className="dashboard-duel-scene bg-[#07101b]/58 px-3 py-4">
                 <div className="text-center">
                   <p className="font-pixel text-[12px] uppercase text-sky-blue">You</p>
-                  <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={220} height={230} priority className="mx-auto mt-2 max-h-[210px] w-auto object-contain object-bottom drop-shadow-[0_16px_18px_rgba(0,0,0,0.55)]" />
-                  <div className="mx-auto mt-2 max-w-[270px]">
-                    <div className="flex items-center gap-2 font-pixel text-[10px] text-white">
-                      <span className="text-red-400">HP</span>
-                      <MiniHealth value={100} />
-                      <span>120 / 120</span>
-                    </div>
+                  <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
+                    <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-player" />
                   </div>
                 </div>
-                <div className="self-center font-pixel text-4xl text-gold drop-shadow-[3px_3px_0_#08050c]">VS</div>
+                <div className="battle-clash dashboard-clash" aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                </div>
                 <div className="text-center">
                   <p className="font-pixel text-[12px] uppercase text-red-400">{previewEnemy.name}</p>
-                  <Image src={previewEnemy.image} alt="" width={270} height={230} priority className="mx-auto mt-2 max-h-[215px] w-auto scale-x-[-1] object-contain object-bottom drop-shadow-[0_16px_18px_rgba(0,0,0,0.55)]" />
-                  <div className="mx-auto mt-2 max-w-[270px]">
-                    <div className="flex items-center gap-2 font-pixel text-[10px] text-white">
-                      <span className="text-red-400">HP</span>
-                      <MiniHealth value={82} tone="red" />
-                      <span>90 / {previewEnemy.maxHP}</span>
-                    </div>
+                  <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
+                    <Image src={previewEnemy.image} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-enemy" />
                   </div>
                 </div>
               </div>

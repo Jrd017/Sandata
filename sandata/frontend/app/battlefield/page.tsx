@@ -17,6 +17,7 @@ import { useStore } from '@/store/useStore';
 
 type Phase = 'lobby' | 'fight';
 type Outcome = 'win' | 'loss';
+type AttackSide = 'player' | 'enemy' | null;
 type Feedback = {
   correctIndex: number;
   explanation: string;
@@ -146,6 +147,7 @@ export default function BattlefieldPage() {
   const [answers, setAnswers] = useState<number[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [attackSide, setAttackSide] = useState<AttackSide>(null);
   const [playerHP, setPlayerHP] = useState(playerMaxHP);
   const [enemyHP, setEnemyHP] = useState(battleEnemies[0].maxHP);
   const [result, setResult] = useState<Result>(null);
@@ -172,6 +174,12 @@ export default function BattlefieldPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!attackSide) return;
+    const timeout = window.setTimeout(() => setAttackSide(null), 680);
+    return () => window.clearTimeout(timeout);
+  }, [attackSide]);
+
   function selectEnemy(enemyId: string) {
     setSelectedEnemyId(enemyId);
     const nextEnemy = battleEnemies.find((item) => item.id === enemyId) || battleEnemies[0];
@@ -180,6 +188,7 @@ export default function BattlefieldPage() {
     setAnswers([]);
     setSelectedAnswer(null);
     setFeedback(null);
+    setAttackSide(null);
     setResult(null);
   }
 
@@ -189,6 +198,7 @@ export default function BattlefieldPage() {
     setAnswers([]);
     setSelectedAnswer(null);
     setFeedback(null);
+    setAttackSide(null);
     setPlayerHP(playerMaxHP);
     setEnemyHP(enemy.maxHP);
     setResult(null);
@@ -253,6 +263,7 @@ export default function BattlefieldPage() {
       correctIndex: question.correctIndex ?? -1,
       explanation: question.explanation || (isCorrect ? 'Your counter lands cleanly.' : 'The attack slips through. Verify before acting.'),
     });
+    setAttackSide(isCorrect ? 'player' : 'enemy');
 
     const strikeDamage = Math.ceil(enemy.maxHP / questions.length);
     setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : 8)));
@@ -313,6 +324,7 @@ export default function BattlefieldPage() {
     setQuestionIndex((current) => current + 1);
     setSelectedAnswer(null);
     setFeedback(null);
+    setAttackSide(null);
   }
 
   function resetToLobby() {
@@ -321,6 +333,7 @@ export default function BattlefieldPage() {
     setAnswers([]);
     setSelectedAnswer(null);
     setFeedback(null);
+    setAttackSide(null);
     setPlayerHP(playerMaxHP);
     setEnemyHP(enemy.maxHP);
     setResult(null);
@@ -455,7 +468,7 @@ export default function BattlefieldPage() {
             </section>
           </header>
 
-          <section className="relative grid min-h-[460px] items-end py-6">
+          <section className="relative grid min-h-[430px] items-end py-6">
             <div className="absolute left-2 top-8 hidden w-32 border-4 border-[#0b0610] bg-[#3b185d] px-4 py-6 text-center shadow-[0_0_0_2px_#d89824] xl:block">
               <p className="font-pixel text-[13px] leading-7 text-gold">SanData</p>
               <Image src={ui.shieldLogo} alt="" width={90} height={90} className="mx-auto mt-4 h-20 w-20 object-contain" />
@@ -464,23 +477,53 @@ export default function BattlefieldPage() {
               <p className="font-pixel text-[13px] leading-8 text-gold">Think Before You Click!</p>
             </div>
 
-            <div className="mx-auto grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-end gap-2">
-              <div className="relative grid min-h-[310px] place-items-end">
-                <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={280} height={310} priority className="mx-auto max-h-[310px] w-auto object-contain object-bottom drop-shadow-[0_20px_20px_rgba(0,0,0,0.55)]" />
-              </div>
-              <div className="mb-28 font-pixel text-4xl text-gold drop-shadow-[4px_4px_0_#08050c]">VS</div>
-              <div className="relative grid min-h-[320px] place-items-end">
-                <div className="absolute -top-5 left-0 right-0 mx-auto max-w-[420px] border-4 border-[#0b0610] bg-[#fff1d2] px-5 py-5 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
-                  <p className="font-pixel text-[13px] leading-7">{question.questionText}</p>
-                </div>
-                <Image src={enemy.image} alt="" width={330} height={330} priority className="mx-auto max-h-[305px] w-auto scale-x-[-1] object-contain object-bottom drop-shadow-[0_20px_20px_rgba(0,0,0,0.55)]" />
+            <div className="absolute left-1/2 top-4 z-20 w-[min(520px,88vw)] -translate-x-1/2 border-4 border-[#0b0610] bg-[#fff1d2] px-5 py-4 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
+              <p className="font-pixel text-[12px] leading-6 sm:text-[13px] sm:leading-7">{question.questionText}</p>
+            </div>
+
+            <div className="absolute left-[16%] top-24 z-20 hidden w-[min(470px,32vw)] lg:block">
+              <div className="pixel-panel min-h-20 p-4">
+                <p className="font-pixel text-[11px] leading-6 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
               </div>
             </div>
 
-            <div className="absolute left-[18%] top-20 hidden w-[520px] lg:block">
-              <div className="pixel-title-ribbon px-8 py-3 text-[11px]">Type Your Answer:</div>
-              <div className="pixel-panel mt-1 h-24 p-4">
-                <p className="font-pixel text-[11px] leading-6 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
+            <div className="battle-duel-grid mx-auto w-full max-w-5xl">
+              <div className="battle-fighter-slot battle-fighter-slot-player">
+                <div className="battle-fighter-stage">
+                  <Image
+                    src={avatarFightingImage(activeUser.avatar)}
+                    alt=""
+                    width={340}
+                    height={340}
+                    priority
+                    className={cn(
+                      'battle-fighter-sprite battle-fighter-player',
+                      attackSide === 'player' && 'battle-fighter-attack-player',
+                      attackSide === 'enemy' && 'battle-fighter-hit',
+                    )}
+                  />
+                </div>
+              </div>
+              <div className="battle-clash" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="battle-fighter-slot battle-fighter-slot-enemy">
+                <div className="battle-fighter-stage">
+                  <Image
+                    src={enemy.image}
+                    alt=""
+                    width={340}
+                    height={340}
+                    priority
+                    className={cn(
+                      'battle-fighter-sprite battle-fighter-enemy',
+                      attackSide === 'enemy' && 'battle-fighter-attack-enemy',
+                      attackSide === 'player' && 'battle-fighter-hit',
+                    )}
+                  />
+                </div>
               </div>
             </div>
           </section>
