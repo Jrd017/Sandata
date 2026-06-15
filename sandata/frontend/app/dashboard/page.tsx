@@ -93,41 +93,41 @@ export default function DashboardPage() {
       style={{ backgroundImage: `linear-gradient(90deg, rgba(7, 7, 13, 0.9), rgba(8, 10, 18, 0.56) 34%, rgba(8, 10, 18, 0.8)), url(${ui.backgrounds.dashboard})` }}
     >
       <Navbar />
-      <main className="mx-auto max-w-[430px] px-3 pb-28 pt-4 transition-[margin-left] duration-300 lg:ml-[var(--sandata-sidebar-width)] lg:max-w-none lg:px-6 lg:pb-8">
-        <section className="mx-auto grid max-w-[1600px] gap-5">
+      <main className="mx-auto max-w-[430px] overflow-x-hidden px-3 pb-28 pt-4 transition-[margin-left] duration-300 lg:ml-[var(--sandata-sidebar-width)] lg:max-w-none lg:px-5 lg:pb-8">
+        <section className="mx-auto grid max-w-[1460px] gap-4">
           <div className="flex items-center justify-end">
             <MusicToggle src={ui.audio.dashboard} label="Dashboard Music" />
           </div>
 
           <section className="pixel-screen-border overflow-hidden bg-[#08111f]/82">
-            <div className="grid min-h-[170px] items-center gap-4 bg-[radial-gradient(circle_at_62%_38%,rgba(255,213,86,0.16),transparent_22%)] px-5 py-5 sm:grid-cols-[1fr_230px_360px] lg:px-10">
-              <div>
-                <p className="font-pixel text-xl leading-10 text-white sm:text-3xl">Welcome back,</p>
-                <h1 className="font-pixel text-3xl leading-[1.45] text-gold sm:text-5xl">{activeUser.username || 'Shield Agent'}!</h1>
+            <div className="grid min-h-[145px] items-center gap-4 bg-[radial-gradient(circle_at_62%_38%,rgba(255,213,86,0.16),transparent_22%)] px-4 py-4 sm:grid-cols-[minmax(0,1fr)_150px] xl:grid-cols-[minmax(0,1fr)_170px_minmax(260px,320px)] xl:px-8">
+              <div className="min-w-0">
+                <p className="font-pixel text-lg leading-8 text-white sm:text-2xl xl:text-[28px]">Welcome back,</p>
+                <h1 className="max-w-full break-words font-pixel text-2xl leading-[1.35] text-gold sm:text-4xl xl:text-[42px]">{activeUser.username || 'Shield Agent'}!</h1>
               </div>
-              <Image src={avatarImage(activeUser.avatar)} alt="" width={220} height={240} priority className="mx-auto hidden max-h-[190px] w-auto object-contain object-bottom sm:block" />
-              <div className="pixel-panel grid grid-cols-[76px_1fr] items-center gap-4 p-4">
-                <Image src={ui.menu.banner} alt="" width={76} height={100} className="h-24 w-16 object-contain" />
-                <div>
-                  <p className="font-pixel text-[13px] leading-6 text-white">{activeUser.username || 'Shield Agent'}</p>
+              <Image src={avatarImage(activeUser.avatar)} alt="" width={190} height={210} priority className="mx-auto hidden max-h-[160px] w-auto object-contain object-bottom sm:block" />
+              <div className="pixel-panel hidden min-w-0 grid-cols-[62px_minmax(0,1fr)] items-center gap-3 overflow-hidden p-3 xl:grid">
+                <Image src={ui.menu.banner} alt="" width={68} height={90} className="h-20 w-14 object-contain" />
+                <div className="min-w-0">
+                  <p className="truncate font-pixel text-[11px] leading-5 text-white">{activeUser.username || 'Shield Agent'}</p>
                   <p className="mt-1 font-pixel text-[11px] leading-5 text-gold">Level {activeUser.level}</p>
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-3 flex min-w-0 items-center gap-2">
                     <MiniHealth value={levelPercent} />
-                    <span className="font-pixel text-[10px] text-white">{levelValue.toLocaleString()} / {levelMax.toLocaleString()} XP</span>
+                    <span className="shrink-0 font-pixel text-[8px] text-white">{levelValue.toLocaleString()} / {levelMax.toLocaleString()} XP</span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_0.9fr]">
-            <section className="pixel-panel overflow-hidden p-4">
-              <div className="mb-3 flex justify-center">
-                <h2 className="pixel-title-ribbon px-10 py-2 text-[13px] leading-6">Battle Readiness</h2>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.82fr)]">
+            <section className="pixel-panel overflow-hidden p-3">
+              <div className="mb-2 flex justify-center">
+                <h2 className="pixel-title-ribbon px-8 py-2 text-[12px] leading-5">Battle Readiness</h2>
               </div>
-              <div className="dashboard-duel-scene bg-[#07101b]/58 px-3 py-4">
+              <div className="dashboard-duel-scene bg-[#07101b]/58 px-3 pb-5 pt-3">
                 <div className="text-center">
-                  <p className="font-pixel text-[12px] uppercase text-sky-blue">You</p>
+                  <p className="font-pixel text-[10px] uppercase text-sky-blue">You</p>
                   <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
                     <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-player" />
                   </div>
@@ -138,33 +138,33 @@ export default function DashboardPage() {
                   <span />
                 </div>
                 <div className="text-center">
-                  <p className="font-pixel text-[12px] uppercase text-red-400">{previewEnemy.name}</p>
+                  <p className="font-pixel text-[10px] uppercase text-red-400">{previewEnemy.name}</p>
                   <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
                     <Image src={previewEnemy.image} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-enemy" />
                   </div>
                 </div>
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <Link href="/battlefield" className="pixel-button-gold px-5 py-4 text-center text-[11px] leading-5">
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                <Link href="/battlefield" className="pixel-button-gold px-5 py-3 text-center text-[10px] leading-5">
                   Play Now
                 </Link>
-                <Link href="/battlefield?join=1" className="pixel-button-gold px-5 py-4 text-center text-[11px] leading-5">
+                <Link href="/battlefield?join=1" className="pixel-button-gold px-5 py-3 text-center text-[10px] leading-5">
                   Join a Friend
                 </Link>
               </div>
             </section>
 
-            <section className="grid gap-5 sm:grid-cols-3 xl:grid-cols-3">
+            <section className="grid gap-4 sm:grid-cols-3 xl:grid-cols-3">
               {[
                 { icon: ui.dashboard.dayStreakIcon, label: 'Day Streak', value: activeUser.dayStreak || 0, copy: 'Keep the fire burning!' },
                 { icon: ui.dashboard.totalEssenceIcon, label: 'Total Essence', value: activeUser.totalXP.toLocaleString(), copy: 'Essence fuels your journey.' },
                 { icon: ui.dashboard.spiritShardsIcon, label: 'Spirit Shards', value: Math.max(0, Math.round(activeUser.totalXP / 6)).toLocaleString(), copy: 'Shards of wisdom.' },
               ].map((stat) => (
-                <div key={stat.label} className="pixel-panel grid min-h-[220px] place-items-center p-4 text-center">
-                  <h2 className="font-pixel text-[13px] uppercase leading-6 text-gold">{stat.label}</h2>
-                  <Image src={stat.icon} alt="" width={104} height={104} className="mt-4 h-20 w-20 object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.52)]" />
-                  <div className="pixel-stat-value mt-3 text-3xl leading-10">{stat.value}</div>
-                  <p className="mt-2 text-sm font-bold leading-6 text-[#e6c99a]">{stat.copy}</p>
+                <div key={stat.label} className="pixel-panel grid min-h-[190px] place-items-center p-3 text-center">
+                  <h2 className="font-pixel text-[10px] uppercase leading-5 text-gold xl:text-[11px]">{stat.label}</h2>
+                  <Image src={stat.icon} alt="" width={88} height={88} className="mt-3 h-16 w-16 object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.52)]" />
+                  <div className="pixel-stat-value mt-3 text-2xl leading-9">{stat.value}</div>
+                  <p className="mt-1 text-xs font-bold leading-5 text-[#e6c99a]">{stat.copy}</p>
                 </div>
               ))}
             </section>
