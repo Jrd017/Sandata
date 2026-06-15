@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --sandata-sidebar-width: 16rem;
+  --sandata-sidebar-width: 18rem;
   --color-primary: #8B7AE6;
   --color-secondary: #5E3AAD;
   --color-dark: #3C2177;
@@ -76,6 +76,148 @@ input:focus-visible {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 34px rgba(60, 33, 119, 0.08);
+}
+
+.pixel-page {
+  min-height: 100dvh;
+  background-color: #080a12;
+  color: #fff7d7;
+  image-rendering: auto;
+}
+
+.pixel-shell {
+  border: 4px solid #050308;
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(15, 18, 27, 0.84), rgba(8, 9, 16, 0.94)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 5px);
+  box-shadow:
+    0 0 0 2px #b9782b,
+    0 0 0 5px #241025,
+    inset 0 0 0 2px rgba(255, 213, 79, 0.18),
+    0 22px 50px rgba(0, 0, 0, 0.36);
+}
+
+.pixel-panel {
+  position: relative;
+  border: 3px solid #09060d;
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(22, 26, 35, 0.94), rgba(9, 12, 19, 0.98)),
+    radial-gradient(circle at 20% 0%, rgba(107, 54, 151, 0.24), transparent 38%);
+  box-shadow:
+    0 0 0 2px #9b6427,
+    inset 0 0 0 2px rgba(255, 211, 86, 0.12),
+    0 10px 0 rgba(0, 0, 0, 0.22);
+}
+
+.pixel-panel-light {
+  position: relative;
+  border: 3px solid #100711;
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, #f5e5c4, #e6c99a),
+    repeating-linear-gradient(90deg, rgba(65, 32, 17, 0.06) 0 2px, transparent 2px 22px);
+  box-shadow:
+    0 0 0 2px #a76d28,
+    inset 0 0 0 2px rgba(255, 250, 220, 0.45),
+    0 10px 0 rgba(0, 0, 0, 0.24);
+  color: #201136;
+}
+
+.pixel-title-ribbon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #09060d;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #6e329b 0%, #351158 100%);
+  box-shadow:
+    0 0 0 2px #b9782b,
+    inset 0 0 0 2px rgba(255, 212, 77, 0.18),
+    0 6px 0 rgba(0, 0, 0, 0.3);
+  color: #ffd45c;
+  font-family: "Press Start 2P", monospace;
+  text-shadow: 2px 2px 0 #12071f;
+}
+
+.pixel-button-gold {
+  border: 3px solid #09060d;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7332a0 0%, #351158 100%);
+  box-shadow:
+    0 0 0 2px #d89824,
+    inset 0 0 0 2px rgba(255, 224, 101, 0.22),
+    0 7px 0 rgba(0, 0, 0, 0.32);
+  color: #ffd45c;
+  font-family: "Press Start 2P", monospace;
+  text-shadow: 2px 2px 0 #110719;
+}
+
+.pixel-button-gold:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.pixel-health-track {
+  border: 3px solid #08050c;
+  border-radius: 2px;
+  background: #1a1821;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(255, 211, 86, 0.35);
+}
+
+.pixel-health-fill {
+  height: 100%;
+  border-right: 2px solid rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), transparent 45%),
+    linear-gradient(90deg, #2fc153, #87e356);
+}
+
+.pixel-health-fill-danger {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 45%),
+    linear-gradient(90deg, #dd2932, #ffb13f);
+}
+
+.pixel-screen-border {
+  position: relative;
+  border: 5px solid #050308;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 2px #d28b2f,
+    0 0 0 6px #1c0d22,
+    inset 0 0 0 2px rgba(255, 231, 128, 0.22);
+}
+
+.pixel-screen-border::before,
+.pixel-screen-border::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  height: 18px;
+  width: 18px;
+  border: 3px solid #0b050d;
+  background: #6e329b;
+  box-shadow: inset 0 0 0 3px #d89824;
+}
+
+.pixel-screen-border::before {
+  left: -10px;
+  top: -10px;
+}
+
+.pixel-screen-border::after {
+  bottom: -10px;
+  right: -10px;
+}
+
+.pixel-stat-value {
+  color: #fff;
+  font-family: "Press Start 2P", monospace;
+  text-shadow: 3px 3px 0 #0c0712;
 }
 
 .phone-shell {

@@ -82,12 +82,14 @@ export interface LeaderboardEntry {
 }
 
 export interface BattleEnemy {
+  category: CategoryKey;
   id: string;
-  name: string;
-  title: string;
-  image: string;
-  weakness: string;
   maxHP: number;
+  name: string;
+  image: string;
+  title: string;
+  weakness: string;
+  questions: QuizQuestion[];
 }
 
 export interface Flashcard {

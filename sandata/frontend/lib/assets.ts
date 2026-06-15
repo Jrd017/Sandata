@@ -1,5 +1,7 @@
 export const ui = {
-  logo: '/assets/ui/logo/logo-sandata-horizontal.png',
+  logo: '/assets/brand/sandata-logo-with-border.png',
+  logoLegacy: '/assets/ui/logo/logo-sandata-horizontal.png',
+  shieldLogo: '/assets/brand/sandata-shield-logo-with-border.png',
   mascots: {
     barong: '/assets/ui/mascots/mascot-barong-boy.png',
     knight: '/assets/ui/mascots/mascot-cyber-knight.png',
@@ -52,6 +54,17 @@ export const ui = {
     profile: '/assets/ui/navigation/navigation-profile-icon.png',
     menu: '/assets/ui/navigation/navigation-menu-icon.png',
   },
+  menu: {
+    arrow: '/assets/menu icons v2/menu_button_arrow.png',
+    banner: '/assets/menu icons v2/menu_icon_banner.png',
+    book: '/assets/menu icons v2/menu_icon_book.png',
+    castle: '/assets/menu icons v2/menu_icon_castle.png',
+    scroll: '/assets/menu icons v2/menu_icon_scroll.png',
+    settings: '/assets/menu icons v2/menu_icon_settings_gear.png',
+    swords: '/assets/menu icons v2/menu_icon_swords.png',
+    chest: '/assets/menu icons v2/menu_icon_treasure_chest.png',
+    trophy: '/assets/menu icons v2/menu_icon_trophy.png',
+  },
   cards: {
     phishing: '/assets/ui/cards/course-card-phishing-basics.png',
     fakeShopping: '/assets/ui/cards/course-card-fake-shopping.png',
@@ -86,6 +99,17 @@ export const ui = {
     xp: '/assets/ui/progress/status-xp-coin.png',
     fire: '/assets/ui/progress/status-streak-fire.png',
     level: '/assets/ui/progress/status-level-7-token.png',
+  },
+  dashboard: {
+    dayStreak: '/assets/dashboard assets v2/dashboard_stat_day_streak.png',
+    totalEssence: '/assets/dashboard assets v2/dashboard_stat_total_essence.png',
+    spiritShards: '/assets/dashboard assets v2/dashboard_stat_spirit_shards.png',
+    serpent: '/assets/dashboard assets v2/dashboard_icon_serpent.png',
+    shield: '/assets/dashboard assets v2/dashboard_icon_shield.png',
+    swords: '/assets/dashboard assets v2/dashboard_icon_swords.png',
+    scroll: '/assets/dashboard assets v2/dashboard_icon_scroll.png',
+    book: '/assets/dashboard assets v2/dashboard_icon_book.png',
+    flag: '/assets/dashboard assets v2/dashboard_icon_flag.png',
   },
   backgrounds: {
     dashboard: '/assets/backgrounds/raw_dashboard_bg.png',
@@ -139,35 +163,36 @@ export function avatarImage(avatar?: string) {
   if (avatar?.startsWith('/assets/')) return avatar;
 
   const map: Record<string, string> = {
-    character_1: ui.avatars.barong,
-    character_2: ui.avatars.heroine,
-    character_3: ui.avatars.knight,
-    character_4: ui.avatars.traditional,
-    character_5: ui.avatars.adventurer,
+    character_1: ui.characters.boy1.standing,
+    character_2: ui.characters.girl1.standing,
+    character_3: ui.characters.boy2.standing,
+    character_4: ui.characters.girl2.standing,
+    character_5: ui.characters.girl1.standing,
   };
-  return map[avatar || 'character_1'] || ui.avatars.barong;
+  return map[avatar || 'character_1'] || ui.characters.boy1.standing;
 }
 
 export function avatarIconImage(avatar?: string) {
   if (avatar?.startsWith('/assets/ui/icons/avatars/')) return avatar;
+  if (avatar?.startsWith('/assets/characters v2/')) return avatar;
 
   const standingMap: Record<string, string> = {
-    [ui.avatars.barong]: ui.avatarIcons.barong,
-    [ui.avatars.heroine]: ui.avatarIcons.heroine,
-    [ui.avatars.knight]: ui.avatarIcons.salakot,
-    [ui.avatars.traditional]: ui.avatarIcons.traditional,
-    [ui.avatars.adventurer]: ui.avatarIcons.adventurer,
+    [ui.avatars.barong]: ui.characters.boy1.profile,
+    [ui.avatars.heroine]: ui.characters.girl1.profile,
+    [ui.avatars.knight]: ui.characters.boy2.profile,
+    [ui.avatars.traditional]: ui.characters.girl2.profile,
+    [ui.avatars.adventurer]: ui.characters.girl1.profile,
   };
   if (avatar && standingMap[avatar]) return standingMap[avatar];
 
   const map: Record<string, string> = {
-    character_1: ui.avatarIcons.barong,
-    character_2: ui.avatarIcons.heroine,
-    character_3: ui.avatarIcons.salakot,
-    character_4: ui.avatarIcons.traditional,
-    character_5: ui.avatarIcons.adventurer,
+    character_1: ui.characters.boy1.profile,
+    character_2: ui.characters.girl1.profile,
+    character_3: ui.characters.boy2.profile,
+    character_4: ui.characters.girl2.profile,
+    character_5: ui.characters.girl1.profile,
   };
-  return map[avatar || 'character_1'] || ui.avatarIcons.barong;
+  return map[avatar || 'character_1'] || ui.characters.boy1.profile;
 }
 
 export function avatarFightingImage(avatar?: string) {
@@ -193,16 +218,16 @@ export function avatarFightingImage(avatar?: string) {
 }
 
 export const avatarChoices = [
-  { id: 'character_1', label: 'Barong Guardian', src: ui.avatars.barong, icon: ui.avatarIcons.barong },
-  { id: 'character_2', label: 'Purple Heroine', src: ui.avatars.heroine, icon: ui.avatarIcons.heroine },
-  { id: 'character_3', label: 'Salakot Guardian', src: ui.avatars.knight, icon: ui.avatarIcons.salakot },
-  { id: 'character_4', label: 'Traditional Seeker', src: ui.avatars.traditional, icon: ui.avatarIcons.traditional },
-  { id: 'character_5', label: 'Purple Adventurer', src: ui.avatars.adventurer, icon: ui.avatarIcons.adventurer },
+  { id: 'character_1', label: 'Shield Agent Boy', src: ui.characters.boy1.standing, icon: ui.characters.boy1.profile },
+  { id: 'character_2', label: 'Shield Agent Girl', src: ui.characters.girl1.standing, icon: ui.characters.girl1.profile },
+  { id: 'character_3', label: 'Cyber Guardian Boy', src: ui.characters.boy2.standing, icon: ui.characters.boy2.profile },
+  { id: 'character_4', label: 'Cyber Guardian Girl', src: ui.characters.girl2.standing, icon: ui.characters.girl2.profile },
+  { id: 'character_5', label: 'Purple Adventurer', src: ui.characters.girl1.standing, icon: ui.characters.girl1.profile },
 ];
 
 export function avatarPathFromChoice(avatar: string) {
   if (avatar.startsWith('/assets/')) return avatar;
-  return avatarChoices.find((choice) => choice.id === avatar)?.src || ui.avatars.barong;
+  return avatarChoices.find((choice) => choice.id === avatar)?.src || ui.characters.boy1.standing;
 }
 
 export function categoryImage(icon?: string) {

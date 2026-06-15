@@ -1,36 +1,35 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Copy, RotateCcw, Swords, Users } from 'lucide-react';
+import { Copy, RotateCcw } from 'lucide-react';
 import { MusicToggle } from '@/components/MusicToggle';
-import { Navbar } from '@/components/Navbar';
-import { QuizOption } from '@/components/QuizOption';
 import api from '@/lib/api';
-import { avatarFightingImage, avatarImage, ui } from '@/lib/assets';
-import { battleEnemies, battlefieldQuestions } from '@/lib/data';
+import { avatarFightingImage, avatarIconImage, ui } from '@/lib/assets';
+import { battleEnemies } from '@/lib/data';
 import { cn } from '@/lib/cn';
 import { hasSupabaseConfig } from '@/lib/supabase';
 import { updateSupabaseQuizStats } from '@/lib/supabaseData';
-import type { User } from '@/lib/types';
+import type { BattleEnemy, User } from '@/lib/types';
 import { useStore } from '@/store/useStore';
 
+type Phase = 'lobby' | 'fight';
 type Outcome = 'win' | 'loss';
-
+type Feedback = {
+  correctIndex: number;
+  explanation: string;
+  isCorrect: boolean;
+} | null;
 type Result = {
   newBadges: string[];
   outcome: Outcome;
   scorePercent: number;
   xpAwarded: number;
-};
-
-type Feedback = {
-  isCorrect: boolean;
-  explanation: string;
-  correctIndex: number;
 } | null;
+
+const playerMaxHP = 120;
 
 const fallbackUser: User = {
   id: 'local-shield-agent',
@@ -87,33 +86,69 @@ function applyLocalBattleResult(user: User | null, xpAwarded: number, scorePerce
   };
 }
 
-function HealthBar({ label, value, tone }: { label: string; value: number; tone: 'green' | 'red' }) {
+function HealthMeter({ current, max, tone }: { current: number; max: number; tone: 'green' | 'red' }) {
+  const percent = Math.round((Math.max(0, current) / Math.max(max, 1)) * 100);
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-[11px] font-black uppercase tracking-[0] text-white/76">
-        <span>{label}</span>
-        <span>{value}%</span>
-      </div>
-      <div className="h-3 overflow-hidden rounded-full border border-white/20 bg-black/28">
+    <div className="grid grid-cols-[32px_1fr_auto] items-center gap-3">
+      <span className="font-pixel text-[15px] text-white">HP</span>
+      <div className="pixel-health-track h-7 overflow-hidden">
         <div
-          className={cn('h-full rounded-full transition-all duration-500', tone === 'green' ? 'bg-gradient-to-r from-teal to-mint' : 'bg-gradient-to-r from-red-500 to-mango')}
-          style={{ width: `${value}%` }}
+          className={tone === 'red' ? 'pixel-health-fill pixel-health-fill-danger' : 'pixel-health-fill'}
+          style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
         />
       </div>
+      <span className="font-pixel text-[13px] text-white">{Math.max(0, current)} / {max}</span>
     </div>
+  );
+}
+
+function EnemyCard({
+  enemy,
+  selected,
+  onSelect,
+}: {
+  enemy: BattleEnemy;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'pixel-panel grid min-h-[250px] gap-3 p-4 text-left transition hover:-translate-y-1',
+        selected && 'shadow-[0_0_0_3px_#ffd45c,inset_0_0_0_2px_rgba(255,212,92,0.22),0_12px_0_rgba(0,0,0,0.22)]',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-pixel text-[12px] leading-6 text-white">{enemy.name}</h3>
+          <p className="mt-1 text-xs font-black uppercase text-gold">{enemy.title}</p>
+        </div>
+        <Image src={ui.shieldLogo} alt="" width={40} height={40} loading="eager" className="h-9 w-9 object-contain" />
+      </div>
+      <div className="grid h-32 place-items-center">
+        <Image src={enemy.image} alt="" width={170} height={160} className="max-h-32 w-auto scale-x-[-1] object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.48)]" />
+      </div>
+      <div className="grid gap-2 text-xs font-bold leading-5 text-white/68">
+        <p>Weakness: <span className="text-white">{enemy.weakness}</span></p>
+        <p>{enemy.questions.length} question battle set</p>
+      </div>
+    </button>
   );
 }
 
 export default function BattlefieldPage() {
   const { user, setUser } = useStore();
-  const [enemyIndex, setEnemyIndex] = useState(0);
+  const [phase, setPhase] = useState<Phase>('lobby');
+  const [selectedEnemyId, setSelectedEnemyId] = useState(battleEnemies[0].id);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [playerHP, setPlayerHP] = useState(100);
-  const [enemyHP, setEnemyHP] = useState(100);
-  const [result, setResult] = useState<Result | null>(null);
+  const [playerHP, setPlayerHP] = useState(playerMaxHP);
+  const [enemyHP, setEnemyHP] = useState(battleEnemies[0].maxHP);
+  const [result, setResult] = useState<Result>(null);
   const [submitting, setSubmitting] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -121,12 +156,43 @@ export default function BattlefieldPage() {
   const [roomStatus, setRoomStatus] = useState('Create a private code or enter one from a friend.');
 
   const activeUser = user || fallbackUser;
-  const enemy = battleEnemies[enemyIndex % battleEnemies.length];
-  const question = battlefieldQuestions[questionIndex];
+  const enemy = battleEnemies.find((item) => item.id === selectedEnemyId) || battleEnemies[0];
+  const questions = enemy.questions;
+  const question = questions[questionIndex];
   const correctCount = useMemo(
-    () => answers.reduce((sum, answer, index) => sum + (answer === battlefieldQuestions[index]?.correctIndex ? 1 : 0), 0),
-    [answers],
+    () => answers.reduce((sum, answer, index) => sum + (answer === questions[index]?.correctIndex ? 1 : 0), 0),
+    [answers, questions],
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).has('join')) {
+      setJoinCode('');
+      setRoomStatus('Enter your friend code to join a shared fight.');
+    }
+  }, []);
+
+  function selectEnemy(enemyId: string) {
+    setSelectedEnemyId(enemyId);
+    const nextEnemy = battleEnemies.find((item) => item.id === enemyId) || battleEnemies[0];
+    setEnemyHP(nextEnemy.maxHP);
+    setQuestionIndex(0);
+    setAnswers([]);
+    setSelectedAnswer(null);
+    setFeedback(null);
+    setResult(null);
+  }
+
+  function startFight() {
+    setPhase('fight');
+    setQuestionIndex(0);
+    setAnswers([]);
+    setSelectedAnswer(null);
+    setFeedback(null);
+    setPlayerHP(playerMaxHP);
+    setEnemyHP(enemy.maxHP);
+    setResult(null);
+  }
 
   async function createRoom() {
     let code = createLocalRoomCode();
@@ -135,14 +201,14 @@ export default function BattlefieldPage() {
       code = data.code;
     } catch {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`sandata-room-${code}`, JSON.stringify({ code, host: activeUser.username, createdAt: Date.now() }));
+        localStorage.setItem(`sandata-room-${code}`, JSON.stringify({ code, host: activeUser.username, enemy: enemy.id, createdAt: Date.now() }));
       }
     }
 
     setRoomCode(code);
     setJoinCode(code);
     setAllyJoined(false);
-    setRoomStatus('Private room ready. Share this code with a friend.');
+    setRoomStatus('Private room ready. Share this code with a friend, then choose Play Now.');
     toast.success('Battle room created');
   }
 
@@ -164,40 +230,42 @@ export default function BattlefieldPage() {
       const { data } = await api.post(`/battlefield/rooms/${code}/join`, {});
       setRoomCode(data.code);
       setAllyJoined(data.players?.length > 1);
-      setRoomStatus(data.players?.length > 1 ? 'Friend joined. Fight is synced for the room.' : 'Joined room. Waiting for another player.');
+      setRoomStatus(data.players?.length > 1 ? 'Friend joined. Select an enemy and start the fight.' : 'Joined room. Waiting for another player.');
       toast.success('Joined battle room');
     } catch {
       setRoomCode(code);
       setAllyJoined(true);
-      setRoomStatus('Joined room locally. Backend sync will activate when the API is available.');
+      setRoomStatus('Joined room locally. Select an enemy and start the fight.');
       toast.success('Joined room');
     }
   }
 
   function choose(optionIndex: number) {
-    if (selected !== null || result || !question) return;
+    if (selectedAnswer !== null || result || !question) return;
 
     const isCorrect = optionIndex === question.correctIndex;
     const nextAnswers = [...answers];
     nextAnswers[questionIndex] = optionIndex;
     setAnswers(nextAnswers);
-    setSelected(optionIndex);
+    setSelectedAnswer(optionIndex);
     setFeedback({
       isCorrect,
       correctIndex: question.correctIndex ?? -1,
       explanation: question.explanation || (isCorrect ? 'Your counter lands cleanly.' : 'The attack slips through. Verify before acting.'),
     });
-    setEnemyHP((current) => Math.max(0, current - (isCorrect ? 30 : 8)));
-    setPlayerHP((current) => Math.max(0, current - (isCorrect ? 5 : 22)));
+
+    const strikeDamage = Math.ceil(enemy.maxHP / questions.length);
+    setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : 8)));
+    setPlayerHP((current) => Math.max(0, current - (isCorrect ? 4 : 28)));
   }
 
   async function submitBattle(outcome: Outcome, finalCorrectCount: number) {
     if (submitting) return;
     setSubmitting(true);
 
-    const totalQuestions = battlefieldQuestions.length;
+    const totalQuestions = questions.length;
     const scorePercent = Math.round((finalCorrectCount / totalQuestions) * 100);
-    const fallbackXP = Math.min(160, Math.max(0, finalCorrectCount * 30 + (outcome === 'win' ? 40 : 0)));
+    const fallbackXP = Math.min(180, Math.max(0, finalCorrectCount * 35 + (outcome === 'win' ? 45 : 0)));
 
     try {
       const { data } = await api.post('/battlefield/submit', {
@@ -235,217 +303,251 @@ export default function BattlefieldPage() {
   }
 
   function continueBattle() {
-    const finalRound = questionIndex >= battlefieldQuestions.length - 1 || enemyHP <= 0 || playerHP <= 0;
+    const finalRound = questionIndex >= questions.length - 1 || enemyHP <= 0 || playerHP <= 0;
     if (finalRound) {
-      const won = enemyHP <= 0 || (correctCount >= 3 && playerHP > 0);
+      const won = enemyHP <= 0 || (correctCount >= Math.ceil(questions.length * 0.67) && playerHP > 0);
       submitBattle(won ? 'win' : 'loss', correctCount).catch(() => toast.error('Could not submit battle'));
       return;
     }
 
     setQuestionIndex((current) => current + 1);
-    setSelected(null);
+    setSelectedAnswer(null);
     setFeedback(null);
   }
 
-  function resetBattle() {
-    setEnemyIndex((current) => (current + 1) % battleEnemies.length);
+  function resetToLobby() {
+    setPhase('lobby');
     setQuestionIndex(0);
     setAnswers([]);
-    setSelected(null);
+    setSelectedAnswer(null);
     setFeedback(null);
-    setPlayerHP(100);
-    setEnemyHP(100);
+    setPlayerHP(playerMaxHP);
+    setEnemyHP(enemy.maxHP);
     setResult(null);
     setSubmitting(false);
   }
 
-  return (
-    <div
-      className="min-h-screen bg-[#160b30] bg-cover bg-center bg-fixed text-white"
-      style={{ backgroundImage: `linear-gradient(180deg, rgba(14, 8, 37, 0.68), rgba(14, 8, 37, 0.88)), url(${ui.backgrounds.battlefield})` }}
-    >
-      <Navbar />
-      <main className="mx-auto max-w-[430px] px-4 pb-28 pt-5 transition-[margin-left] duration-300 lg:ml-[var(--sandata-sidebar-width)] lg:max-w-none lg:px-8 lg:pb-10">
-        <section className="mx-auto max-w-7xl">
+  if (phase === 'lobby') {
+    return (
+      <main
+        className="pixel-page min-h-screen bg-cover bg-center bg-fixed px-4 py-5"
+        style={{ backgroundImage: `linear-gradient(180deg, rgba(5, 7, 12, 0.58), rgba(5, 7, 12, 0.86)), url(${ui.backgrounds.battlefield})` }}
+      >
+        <section className="mx-auto max-w-[1680px]">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-pixel text-[10px] uppercase leading-5 text-teal">Quiz Fight</p>
-              <h1 className="font-pixel text-xl leading-9 text-white sm:text-2xl">Battlefield</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <MusicToggle src={ui.audio.battlefield} label="Battle Music" />
-              <Link href="/dashboard" className="rounded-lg border border-white/20 bg-white/12 px-4 py-3 text-xs font-bold text-white backdrop-blur hover:bg-white/18">
-                Dashboard
-              </Link>
-            </div>
+            <Link href="/dashboard" className="pixel-button-gold px-4 py-3 text-[10px]">Command Center</Link>
+            <Image src={ui.logo} alt="SanData" width={430} height={170} priority className="h-auto w-[260px] object-contain sm:w-[360px]" />
+            <MusicToggle src={ui.audio.battlefield} label="Battle Music" />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_280px]">
-            <aside className="rounded-lg border border-white/14 bg-[#180b34]/78 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.22)] backdrop-blur">
-              <div className="flex items-center gap-3">
-                <div className="grid h-14 w-14 place-items-end overflow-hidden rounded-full border border-teal/35 bg-white/10">
-                  <Image src={avatarImage(activeUser.avatar)} alt="" width={54} height={70} className="h-16 w-auto object-contain object-bottom" />
+          <div className="grid gap-5 xl:grid-cols-[380px_1fr]">
+            <aside className="grid gap-5">
+              <section className="pixel-panel p-5">
+                <div className="mb-4 flex justify-center">
+                  <h1 className="pixel-title-ribbon px-7 py-2 text-[12px] leading-6">Battle Gate</h1>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black">{activeUser.username}</p>
-                  <p className="truncate text-xs font-bold text-white/62">{activeUser.rank}</p>
+                <div className="grid grid-cols-[84px_1fr] items-center gap-4">
+                  <Image src={avatarIconImage(activeUser.avatar)} alt="" width={90} height={110} className="h-24 w-20 object-contain" />
+                  <div>
+                    <p className="font-pixel text-[13px] leading-6 text-white">{activeUser.username || 'Shield Agent'}</p>
+                    <p className="text-sm font-bold text-white/60">{activeUser.rank}</p>
+                    <p className="mt-3 text-xs font-black uppercase text-gold">{allyJoined ? 'Ally Linked' : 'Solo Ready'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4">
-                <HealthBar label="Your Guard" value={playerHP} tone="green" />
-              </div>
+                <div className="mt-5 grid gap-3">
+                  <button type="button" onClick={startFight} className="pixel-button-gold px-5 py-4 text-[12px] leading-5">
+                    Play Now
+                  </button>
+                  <button type="button" onClick={createRoom} className="pixel-button-gold px-5 py-4 text-[12px] leading-5">
+                    Join a Friend
+                  </button>
+                </div>
+              </section>
 
-              <div className="mt-5 rounded-lg border border-white/12 bg-white/8 p-3">
-                <div className="mb-3 flex items-center gap-2 text-sm font-black">
-                  <Users className="h-4 w-4 text-teal" />
-                  Friend Room
-                </div>
-                <p className="text-xs font-semibold leading-5 text-white/68">{roomStatus}</p>
-                <div className="mt-3 flex gap-2">
-                  <button type="button" onClick={createRoom} className="rounded-lg bg-teal px-3 py-2 text-xs font-black text-[#1d1136] shadow">
+              <section className="pixel-panel p-5">
+                <h2 className="font-pixel text-[12px] leading-6 text-gold">Friend Code</h2>
+                <p className="mt-3 text-sm font-bold leading-6 text-white/62">{roomStatus}</p>
+                <div className="mt-4 flex gap-2">
+                  <button type="button" onClick={createRoom} className="pixel-button-gold px-4 py-3 text-[10px]">
                     Create
                   </button>
-                  <button type="button" onClick={copyRoomCode} disabled={!roomCode} className="grid h-9 w-9 place-items-center rounded-lg border border-white/18 bg-white/10 disabled:opacity-40" aria-label="Copy room code">
+                  <button type="button" onClick={copyRoomCode} disabled={!roomCode} className="grid h-12 w-12 place-items-center border-2 border-[#0b0610] bg-[#241034] text-gold shadow-[0_0_0_2px_#9b6427] disabled:opacity-40" aria-label="Copy room code">
                     <Copy className="h-4 w-4" />
                   </button>
                 </div>
-                {roomCode ? <div className="mt-3 rounded-lg bg-black/22 px-3 py-2 font-pixel text-[12px] text-gold">{roomCode}</div> : null}
-                <form className="mt-3 flex gap-2" onSubmit={joinRoom}>
+                {roomCode ? <div className="mt-4 border-2 border-[#0b0610] bg-black/42 px-4 py-3 font-pixel text-lg text-gold shadow-[0_0_0_2px_#9b6427]">{roomCode}</div> : null}
+                <form className="mt-4 grid gap-3" onSubmit={joinRoom}>
                   <input
                     value={joinCode}
                     onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                    className="min-w-0 flex-1 rounded-lg border border-white/14 bg-white/10 px-3 py-2 text-xs font-bold text-white outline-none placeholder:text-white/42"
-                    placeholder="Room code"
+                    className="border-2 border-[#0b0610] bg-black/42 px-4 py-3 font-pixel text-[11px] text-white outline-none shadow-[0_0_0_2px_#9b6427] placeholder:text-white/35"
+                    placeholder="TYPE CODE"
                     maxLength={8}
                   />
-                  <button type="submit" className="rounded-lg border border-white/18 bg-white/12 px-3 py-2 text-xs font-black text-white">
-                    Join
-                  </button>
+                  <button type="submit" className="pixel-button-gold px-5 py-4 text-[11px]">Join Room</button>
                 </form>
-                {allyJoined ? (
-                  <div className="mt-3 rounded-lg border border-teal/30 bg-teal/12 px-3 py-2 text-xs font-black text-teal">
-                    Ally linked for this fight
-                  </div>
-                ) : null}
-              </div>
+              </section>
             </aside>
 
-            <section className="rounded-lg border border-white/14 bg-[#120823]/82 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur sm:p-5">
-              <div className="grid min-h-[300px] grid-cols-[1fr_auto_1fr] items-end gap-2 rounded-lg border border-white/10 bg-black/18 px-2 pt-4 sm:px-6">
-                <div className="relative flex h-full min-h-[260px] items-end justify-center">
-                  <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={230} height={260} priority className="max-h-[250px] w-auto object-contain object-bottom drop-shadow-[0_18px_22px_rgba(0,0,0,0.35)]" />
+            <section className="pixel-panel p-5">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-pixel text-[11px] uppercase leading-5 text-teal">Choose Your Enemy</p>
+                  <h2 className="font-pixel text-2xl leading-10 text-white">Battle Selection</h2>
                 </div>
-                <div className="self-center rounded-full border border-gold/40 bg-black/35 px-3 py-2 font-pixel text-[10px] text-gold">
-                  VS
-                </div>
-                <div className="relative flex h-full min-h-[260px] items-end justify-center">
-                  <Image src={enemy.image} alt="" width={245} height={270} priority className="max-h-[260px] w-auto scale-x-[-1] object-contain object-bottom drop-shadow-[0_18px_22px_rgba(0,0,0,0.42)]" />
+                <div className="pixel-panel-light px-4 py-3 font-pixel text-[10px]">
+                  {enemy.name} selected
                 </div>
               </div>
 
-              {result ? (
-                <div className="mt-5 rounded-lg border border-white/12 bg-white/10 p-5 text-center">
-                  <div className={cn('mx-auto grid h-16 w-16 place-items-center rounded-full', result.outcome === 'win' ? 'bg-teal text-[#1d1136]' : 'bg-red-500 text-white')}>
-                    <Swords className="h-8 w-8" />
-                  </div>
-                  <h2 className="mt-4 font-pixel text-lg leading-8">{result.outcome === 'win' ? 'Victory Secured' : 'Battle Complete'}</h2>
-                  <p className="mt-2 text-sm font-semibold text-white/70">
-                    Score {result.scorePercent}% - +{result.xpAwarded} Spirit Shards
-                  </p>
-                  {result.newBadges.length ? <p className="mt-2 text-sm font-black text-gold">New badge: {result.newBadges.join(', ')}</p> : null}
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <button type="button" onClick={resetBattle} className="rounded-lg bg-teal px-4 py-3 font-pixel text-[11px] text-[#1d1136] shadow">
-                      Fight Again
-                    </button>
-                    <Link href="/leaderboard" className="rounded-lg border border-white/18 bg-white/10 px-4 py-3 font-pixel text-[11px] text-white">
-                      Leaderboard
-                    </Link>
-                  </div>
+              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                {battleEnemies.map((item) => (
+                  <EnemyCard
+                    key={item.id}
+                    enemy={item}
+                    selected={item.id === enemy.id}
+                    onSelect={() => selectEnemy(item.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main
+      className="pixel-page min-h-screen overflow-hidden bg-cover bg-center px-3 py-4"
+      style={{ backgroundImage: `linear-gradient(180deg, rgba(4, 5, 7, 0.18), rgba(4, 5, 7, 0.3)), url(${ui.backgrounds.battlefield})` }}
+    >
+      <section className="pixel-screen-border relative mx-auto min-h-[calc(100dvh-2rem)] max-w-[1800px] overflow-hidden bg-transparent">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.16))]" />
+        <div className="relative z-10 grid min-h-[calc(100dvh-2rem)] grid-rows-[auto_1fr_auto] px-4 py-4 sm:px-8">
+          <header className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px_minmax(0,1fr)] lg:items-start">
+            <section className="pixel-panel grid grid-cols-[94px_1fr] items-center gap-4 p-3">
+              <div className="pixel-panel-light grid h-24 w-24 place-items-center overflow-hidden p-1">
+                <Image src={avatarIconImage(activeUser.avatar)} alt="" width={86} height={100} className="h-24 w-auto object-contain" />
+              </div>
+              <div>
+                <h1 className="font-pixel text-xl leading-8 text-white">Shield Agent</h1>
+                <div className="mt-3">
+                  <HealthMeter current={playerHP} max={playerMaxHP} tone="green" />
                 </div>
-              ) : (
-                <div className="mt-5">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-pixel text-[10px] uppercase leading-5 text-teal">{question.scenarioType}</p>
-                      <h2 className="mt-1 text-lg font-black text-white">{question.scenarioTitle}</h2>
-                      <p className="mt-1 text-sm font-semibold text-white/62">{question.scenarioSubtitle}</p>
-                    </div>
-                    <div className="rounded-lg border border-white/14 bg-white/8 px-3 py-2 font-pixel text-[10px] text-gold">
-                      {questionIndex + 1} / {battlefieldQuestions.length}
-                    </div>
+              </div>
+            </section>
+
+            <div className="grid justify-center">
+              <Image src={ui.logo} alt="SanData Quiz Fight" width={390} height={160} priority className="h-auto w-[290px] object-contain sm:w-[360px]" />
+            </div>
+
+            <section className="pixel-panel grid grid-cols-[1fr_104px] items-center gap-4 p-3">
+              <div>
+                <h2 className="text-right font-pixel text-xl leading-8 text-white">{enemy.name}</h2>
+                <div className="mt-3">
+                  <HealthMeter current={enemyHP} max={enemy.maxHP} tone="red" />
+                </div>
+              </div>
+              <div className="pixel-panel-light grid h-24 w-24 place-items-center overflow-hidden p-1">
+                <Image src={enemy.image} alt="" width={106} height={106} className="h-24 w-auto scale-x-[-1] object-contain" />
+              </div>
+            </section>
+          </header>
+
+          <section className="relative grid min-h-[460px] items-end py-6">
+            <div className="absolute left-2 top-8 hidden w-32 border-4 border-[#0b0610] bg-[#3b185d] px-4 py-6 text-center shadow-[0_0_0_2px_#d89824] xl:block">
+              <p className="font-pixel text-[13px] leading-7 text-gold">SanData</p>
+              <Image src={ui.shieldLogo} alt="" width={90} height={90} className="mx-auto mt-4 h-20 w-20 object-contain" />
+            </div>
+            <div className="absolute right-2 top-8 hidden w-32 border-4 border-[#0b0610] bg-[#3b185d] px-4 py-6 text-center shadow-[0_0_0_2px_#d89824] xl:block">
+              <p className="font-pixel text-[13px] leading-8 text-gold">Think Before You Click!</p>
+            </div>
+
+            <div className="mx-auto grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-end gap-2">
+              <div className="relative grid min-h-[310px] place-items-end">
+                <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={280} height={310} priority className="mx-auto max-h-[310px] w-auto object-contain object-bottom drop-shadow-[0_20px_20px_rgba(0,0,0,0.55)]" />
+              </div>
+              <div className="mb-28 font-pixel text-4xl text-gold drop-shadow-[4px_4px_0_#08050c]">VS</div>
+              <div className="relative grid min-h-[320px] place-items-end">
+                <div className="absolute -top-5 left-0 right-0 mx-auto max-w-[420px] border-4 border-[#0b0610] bg-[#fff1d2] px-5 py-5 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
+                  <p className="font-pixel text-[13px] leading-7">{question.questionText}</p>
+                </div>
+                <Image src={enemy.image} alt="" width={330} height={330} priority className="mx-auto max-h-[305px] w-auto scale-x-[-1] object-contain object-bottom drop-shadow-[0_20px_20px_rgba(0,0,0,0.55)]" />
+              </div>
+            </div>
+
+            <div className="absolute left-[18%] top-20 hidden w-[520px] lg:block">
+              <div className="pixel-title-ribbon px-8 py-3 text-[11px]">Type Your Answer:</div>
+              <div className="pixel-panel mt-1 h-24 p-4">
+                <p className="font-pixel text-[11px] leading-6 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
+              </div>
+            </div>
+          </section>
+
+          <footer className="relative">
+            {result ? (
+              <section className="pixel-panel mx-auto mb-5 max-w-3xl p-5 text-center">
+                <h2 className="font-pixel text-2xl leading-10 text-gold">{result.outcome === 'win' ? 'Victory Secured' : 'Battle Complete'}</h2>
+                <p className="mt-2 text-sm font-black text-white/72">Score {result.scorePercent}% - +{result.xpAwarded} Spirit Shards</p>
+                {result.newBadges.length ? <p className="mt-2 text-sm font-black text-gold">New badge: {result.newBadges.join(', ')}</p> : null}
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <button type="button" onClick={startFight} className="pixel-button-gold px-4 py-4 text-[10px]">Fight Again</button>
+                  <button type="button" onClick={resetToLobby} className="pixel-button-gold px-4 py-4 text-[10px]">Choose Enemy</button>
+                  <Link href="/dashboard" className="pixel-button-gold px-4 py-4 text-[10px]">Dashboard</Link>
+                </div>
+              </section>
+            ) : (
+              <>
+                <div className="grid gap-3 lg:grid-cols-4">
+                  {question.options.map((option, optionIndex) => {
+                    let state = 'border-[#0b0610] bg-[#150d1d] text-white';
+                    if (selectedAnswer !== null && feedback) {
+                      if (optionIndex === feedback.correctIndex) state = 'border-[#0b0610] bg-[#163d23] text-white';
+                      else if (optionIndex === selectedAnswer) state = 'border-[#0b0610] bg-[#4a1720] text-white';
+                      else state = 'border-[#0b0610] bg-[#150d1d]/72 text-white/48';
+                    }
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        disabled={selectedAnswer !== null}
+                        onClick={() => choose(optionIndex)}
+                        className={cn('grid min-h-[116px] grid-cols-[72px_1fr] items-center gap-4 border-4 p-4 text-left shadow-[0_0_0_2px_#9b6427,inset_0_0_0_2px_rgba(255,224,101,0.12)] transition hover:-translate-y-1 disabled:cursor-default', state)}
+                      >
+                        <span className="grid h-16 w-16 place-items-center border-4 border-[#0b0610] bg-[#5c2587] font-pixel text-3xl text-white shadow-[0_0_0_2px_#d89824]">{String.fromCharCode(65 + optionIndex)}.</span>
+                        <span className="font-pixel text-lg leading-8">{option}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 grid items-center gap-3 lg:grid-cols-[1fr_auto_1fr]">
+                  <Link href="/dashboard" className="pixel-button-gold px-4 py-3 text-center text-[10px]">Command Center</Link>
+                  <div className="pixel-panel mx-auto px-8 py-3 font-pixel text-[13px] text-gold">
+                    Defend. Think. Protect.
                   </div>
-
-                  <div className="rounded-lg border border-white/12 bg-white/9 p-4">
-                    <p className="text-base font-black leading-7">{question.questionText}</p>
-                    <p className="mt-3 text-xs font-semibold text-white/60">Enemy weakness: {enemy.weakness}</p>
-                  </div>
-
-                  <div className="mt-4 grid gap-3">
-                    {question.options.map((option, optionIndex) => {
-                      let state: 'idle' | 'selected' | 'correct' | 'incorrect' | 'disabled' = 'idle';
-                      if (selected !== null && feedback) {
-                        if (optionIndex === feedback.correctIndex) state = 'correct';
-                        else if (optionIndex === selected) state = feedback.isCorrect ? 'correct' : 'incorrect';
-                        else state = 'disabled';
-                      }
-                      return (
-                        <QuizOption
-                          key={option}
-                          letter={String.fromCharCode(65 + optionIndex)}
-                          text={option}
-                          state={state}
-                          disabled={selected !== null}
-                          onClick={() => choose(optionIndex)}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {feedback ? (
-                    <div className={cn('mt-4 rounded-lg border p-4 text-sm font-bold leading-6', feedback.isCorrect ? 'border-teal/35 bg-teal/12 text-teal' : 'border-red-400/35 bg-red-500/12 text-red-100')}>
-                      {feedback.explanation}
-                    </div>
-                  ) : null}
-
-                  {selected !== null ? (
+                  {selectedAnswer !== null ? (
                     <button
                       type="button"
                       onClick={continueBattle}
                       disabled={submitting}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-gold to-mango px-5 py-4 font-pixel text-[12px] text-[#211044] shadow-pixel disabled:opacity-60"
+                      className="pixel-button-gold px-4 py-3 text-[10px] disabled:opacity-60"
                     >
-                      {submitting ? 'Saving Battle' : questionIndex === battlefieldQuestions.length - 1 || enemyHP <= 0 || playerHP <= 0 ? 'Finish Battle' : 'Next Strike'}
+                      {submitting ? 'Saving Battle' : questionIndex === questions.length - 1 || enemyHP <= 0 || playerHP <= 0 ? 'Finish Battle' : 'Next Strike'}
                     </button>
-                  ) : null}
+                  ) : (
+                    <button type="button" onClick={resetToLobby} className="pixel-button-gold px-4 py-3 text-[10px]">
+                      <RotateCcw className="mr-2 inline h-4 w-4" />
+                      Choose Enemy
+                    </button>
+                  )}
                 </div>
-              )}
-            </section>
-
-            <aside className="rounded-lg border border-white/14 bg-[#180b34]/78 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.22)] backdrop-blur">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black">{enemy.name}</p>
-                  <p className="text-xs font-bold text-white/62">{enemy.title}</p>
-                </div>
-                <button type="button" onClick={resetBattle} className="grid h-10 w-10 place-items-center rounded-lg border border-white/16 bg-white/10" aria-label="New enemy">
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-4">
-                <HealthBar label="Enemy Guard" value={enemyHP} tone="red" />
-              </div>
-              <div className="mt-5 rounded-lg border border-white/12 bg-white/8 p-4">
-                <div className="font-pixel text-[10px] leading-5 text-gold">Battle Rules</div>
-                <div className="mt-3 grid gap-3 text-xs font-semibold leading-5 text-white/68">
-                  <p>Correct answers break enemy guard and preserve your own.</p>
-                  <p>Three strong counters or an empty enemy guard wins the fight.</p>
-                  <p>Battle results update XP, accuracy, and leaderboard data when the API is connected.</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
-      </main>
-    </div>
+              </>
+            )}
+          </footer>
+        </div>
+      </section>
+    </main>
   );
 }

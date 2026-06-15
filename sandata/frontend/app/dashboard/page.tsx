@@ -4,18 +4,25 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/Navbar';
-import { XPBar } from '@/components/XPBar';
-import { StatChip } from '@/components/StatChip';
-import { MissionCard } from '@/components/MissionCard';
-import { ModuleCard } from '@/components/ModuleCard';
 import { MusicToggle } from '@/components/MusicToggle';
+import { Navbar } from '@/components/Navbar';
 import api from '@/lib/api';
-import { fallbackMissions, fallbackModules, getLevelProgress } from '@/lib/data';
+import { battleEnemies, fallbackMissions, fallbackModules, getLevelProgress } from '@/lib/data';
 import { getDailyTip, scamTips, type DailyTip } from '@/lib/dailyTips';
 import type { LearningModule, Mission } from '@/lib/types';
+import { avatarFightingImage, avatarImage, categoryImage, ui } from '@/lib/assets';
 import { useStore } from '@/store/useStore';
-import { avatarImage, categoryImage, ui } from '@/lib/assets';
+
+function MiniHealth({ value, tone = 'green' }: { value: number; tone?: 'green' | 'red' }) {
+  return (
+    <div className="pixel-health-track h-5 w-full overflow-hidden">
+      <div
+        className={tone === 'red' ? 'pixel-health-fill pixel-health-fill-danger' : 'pixel-health-fill'}
+        style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+      />
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -55,7 +62,7 @@ export default function DashboardPage() {
     username: 'Shield Agent',
     totalXP: 0,
     xp: 0,
-    levelXPGoal: 2000,
+    levelXPGoal: 2500,
     level: 1,
     rank: 'Aspirant',
     dayStreak: 0,
@@ -72,151 +79,160 @@ export default function DashboardPage() {
   const xp = getLevelProgress(activeUser.totalXP, activeUser.level);
   const levelValue = activeUser.xp ?? Math.max(0, activeUser.totalXP - xp.current);
   const levelMax = activeUser.levelXPGoal ?? Math.max(1, xp.next - xp.current);
-  const recommended = useMemo(() => {
-    if (modules.length) return modules.slice(0, 4);
-    return fallbackModules.slice(0, 4);
-  }, [modules]);
-  const continueModule = recommended[0];
+  const levelPercent = Math.round((levelValue / Math.max(levelMax, 1)) * 100);
+  const recommended = useMemo(() => (modules.length ? modules : fallbackModules).slice(0, 3), [modules]);
+  const previewEnemy = battleEnemies[0];
+  const missionRows = [
+    ...missions.slice(0, 3),
+    { id: 'invite_agent', label: 'Invite a Fellow Agent', target: 1, progress: 0, xp: 50 },
+  ];
 
   return (
     <div
-      className="min-h-screen bg-[#fbf8ff] bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: `linear-gradient(180deg, rgba(255, 248, 251, 0.9), rgba(247, 240, 255, 0.94)), url(${ui.backgrounds.dashboard})` }}
+      className="pixel-page bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: `linear-gradient(90deg, rgba(7, 7, 13, 0.9), rgba(8, 10, 18, 0.56) 34%, rgba(8, 10, 18, 0.8)), url(${ui.backgrounds.dashboard})` }}
     >
       <Navbar />
-      <main className="mx-auto max-w-[390px] px-4 pb-28 pt-5 transition-[margin-left] duration-300 lg:ml-[var(--sandata-sidebar-width)] lg:max-w-none lg:px-8 lg:pb-10">
-        <section className="mx-auto max-w-7xl">
-          <div className="mb-4 flex justify-end">
+      <main className="mx-auto max-w-[430px] px-3 pb-28 pt-4 transition-[margin-left] duration-300 lg:ml-[var(--sandata-sidebar-width)] lg:max-w-none lg:px-6 lg:pb-8">
+        <section className="mx-auto grid max-w-[1600px] gap-5">
+          <div className="flex items-center justify-end">
             <MusicToggle src={ui.audio.dashboard} label="Dashboard Music" />
           </div>
-          <div className="space-y-5">
-            <div className="space-y-4 lg:hidden">
-              <div className="flex items-center justify-between">
-                <button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm" aria-label="Open menu">
-                  <Image src={ui.nav.menu} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
-                </button>
-                <div className="flex items-center gap-3">
-                  <button type="button" className="relative grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm" aria-label="Notifications">
-                    <Image src={ui.icons.bell} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
-                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-                  </button>
-                  <Link href="/profile" className="grid h-12 w-12 place-items-end overflow-hidden rounded-full border border-ube-soft/25 bg-lavender">
-                    <Image src={avatarImage(activeUser.avatar)} alt="" width={42} height={56} className="h-12 w-9 object-contain object-bottom" />
+
+          <section className="pixel-screen-border overflow-hidden bg-[#08111f]/82">
+            <div className="grid min-h-[170px] items-center gap-4 bg-[radial-gradient(circle_at_62%_38%,rgba(255,213,86,0.16),transparent_22%)] px-5 py-5 sm:grid-cols-[1fr_230px_360px] lg:px-10">
+              <div>
+                <p className="font-pixel text-xl leading-10 text-white sm:text-3xl">Welcome back,</p>
+                <h1 className="font-pixel text-3xl leading-[1.45] text-gold sm:text-5xl">{activeUser.username || 'Shield Agent'}!</h1>
+              </div>
+              <Image src={avatarImage(activeUser.avatar)} alt="" width={220} height={240} priority className="mx-auto hidden max-h-[190px] w-auto object-contain object-bottom sm:block" />
+              <div className="pixel-panel grid grid-cols-[76px_1fr] items-center gap-4 p-4">
+                <Image src={ui.menu.banner} alt="" width={76} height={100} className="h-24 w-16 object-contain" />
+                <div>
+                  <p className="font-pixel text-[13px] leading-6 text-white">{activeUser.username || 'Shield Agent'}</p>
+                  <p className="mt-1 font-pixel text-[11px] leading-5 text-gold">Level {activeUser.level}</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <MiniHealth value={levelPercent} />
+                    <span className="font-pixel text-[10px] text-white">{levelValue.toLocaleString()} / {levelMax.toLocaleString()} XP</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_0.9fr]">
+            <section className="pixel-panel overflow-hidden p-4">
+              <div className="mb-3 flex justify-center">
+                <h2 className="pixel-title-ribbon px-10 py-2 text-[13px] leading-6">Battle Readiness</h2>
+              </div>
+              <div className="grid min-h-[310px] grid-cols-[1fr_auto_1fr] items-end gap-2 bg-[#07101b]/58 px-3 py-4">
+                <div className="text-center">
+                  <p className="font-pixel text-[12px] uppercase text-sky-blue">You</p>
+                  <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={220} height={230} priority className="mx-auto mt-2 max-h-[210px] w-auto object-contain object-bottom drop-shadow-[0_16px_18px_rgba(0,0,0,0.55)]" />
+                  <div className="mx-auto mt-2 max-w-[270px]">
+                    <div className="flex items-center gap-2 font-pixel text-[10px] text-white">
+                      <span className="text-red-400">HP</span>
+                      <MiniHealth value={100} />
+                      <span>120 / 120</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="self-center font-pixel text-4xl text-gold drop-shadow-[3px_3px_0_#08050c]">VS</div>
+                <div className="text-center">
+                  <p className="font-pixel text-[12px] uppercase text-red-400">{previewEnemy.name}</p>
+                  <Image src={previewEnemy.image} alt="" width={270} height={230} priority className="mx-auto mt-2 max-h-[215px] w-auto scale-x-[-1] object-contain object-bottom drop-shadow-[0_16px_18px_rgba(0,0,0,0.55)]" />
+                  <div className="mx-auto mt-2 max-w-[270px]">
+                    <div className="flex items-center gap-2 font-pixel text-[10px] text-white">
+                      <span className="text-red-400">HP</span>
+                      <MiniHealth value={82} tone="red" />
+                      <span>90 / {previewEnemy.maxHP}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Link href="/battlefield" className="pixel-button-gold px-5 py-4 text-center text-[11px] leading-5">
+                  Play Now
+                </Link>
+                <Link href="/battlefield?join=1" className="pixel-button-gold px-5 py-4 text-center text-[11px] leading-5">
+                  Join a Friend
+                </Link>
+              </div>
+            </section>
+
+            <section className="grid gap-5 sm:grid-cols-3 xl:grid-cols-3">
+              {[
+                { image: ui.dashboard?.dayStreak || '/assets/dashboard assets v2/dashboard_stat_day_streak.png', label: 'Day Streak', value: activeUser.dayStreak || 0, copy: 'Keep the fire burning!' },
+                { image: '/assets/dashboard assets v2/dashboard_stat_total_essence.png', label: 'Total Essence', value: activeUser.totalXP.toLocaleString(), copy: 'Essence fuels your journey.' },
+                { image: '/assets/dashboard assets v2/dashboard_stat_spirit_shards.png', label: 'Spirit Shards', value: Math.max(0, Math.round(activeUser.totalXP / 6)).toLocaleString(), copy: 'Shards of wisdom.' },
+              ].map((stat) => (
+                <div key={stat.label} className="pixel-panel grid min-h-[230px] place-items-center p-4 text-center">
+                  <h2 className="font-pixel text-[13px] uppercase leading-6 text-gold">{stat.label}</h2>
+                  <Image src={stat.image} alt="" width={118} height={118} className="mt-4 h-24 w-24 object-contain" />
+                  <div className="pixel-stat-value mt-4 text-3xl leading-10">{stat.value}</div>
+                  <p className="mt-2 text-sm font-bold leading-6 text-[#e6c99a]">{stat.copy}</p>
+                </div>
+              ))}
+            </section>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[0.95fr_1fr]">
+            <section className="pixel-panel-light overflow-hidden p-5">
+              <div className="mb-4 flex justify-center">
+                <h2 className="pixel-title-ribbon px-8 py-2 text-[12px] leading-5">Prophecies In Progress</h2>
+              </div>
+              <div className="grid gap-3">
+                {recommended.map((module, index) => (
+                  <Link key={module._id} href={`/learn/${module._id}`} className="grid grid-cols-[70px_1fr] items-center gap-4 border-2 border-[#4a2b18] bg-[#f8e6bf] p-3 text-[#201136] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]">
+                    <Image src={categoryImage(module.icon)} alt="" width={72} height={72} className="h-16 w-16 object-cover object-top" />
+                    <div>
+                      <h3 className="font-pixel text-[11px] leading-5">{['I.', 'II.', 'III.'][index]} {module.title}</h3>
+                      <p className="mt-1 text-sm font-black leading-5">{module.description || 'Advance your shield training.'}</p>
+                      <div className="mt-2 flex items-center gap-3">
+                        <div className="h-4 flex-1 border-2 border-[#201136] bg-[#2a2023]">
+                          <div className="h-full bg-[#3fbd45]" style={{ width: `${module.percentComplete || (index === 0 ? 75 : index === 1 ? 60 : 40)}%` }} />
+                        </div>
+                        <span className="font-pixel text-[10px]">{module.percentComplete || (index === 0 ? 75 : index === 1 ? 60 : 40)}%</span>
+                      </div>
+                    </div>
                   </Link>
-                </div>
-              </div>
-              <h1 className="text-lg font-semibold text-[#211044]">Hello, <span className="font-bold">Shield Agent!</span></h1>
-              <div className="app-card p-4">
-                <div className="grid grid-cols-[1fr_76px] items-center gap-4">
-                  <div>
-                    <h2 className="font-pixel text-[14px] leading-6 text-[#211044]">Level {activeUser.level}</h2>
-                    <p className="mt-1 text-sm font-bold text-slate-dark">{activeUser.rank}</p>
-                    <div className="mt-4">
-                      <XPBar value={levelValue} max={levelMax} level={activeUser.level} />
-                    </div>
-                  </div>
-                  <Image src={ui.icons.shield} alt="" width={82} height={82} className="h-20 w-20 object-contain" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <StatChip icon={ui.icons.lightning} value={activeUser.dayStreak} label="Day Streak" />
-                <StatChip icon={ui.icons.star} value={activeUser.totalXP.toLocaleString()} label="Spirit Shards" />
-                <StatChip icon={ui.icons.fire} value={activeUser.weekStreak} label="Week Streak" />
-              </div>
-            </div>
-
-            <div className="hidden gap-4 lg:grid lg:grid-cols-[1.1fr_1fr]">
-              <div className="app-card p-5">
-                <div className="grid grid-cols-3 divide-x divide-ube-soft/20">
-                  <StatChip icon={ui.icons.lightning} value={activeUser.dayStreak} label="Day Streak" />
-                  <StatChip icon={ui.icons.star} value={activeUser.totalXP.toLocaleString()} label="Spirit Shards" />
-                  <StatChip icon={ui.icons.fire} value={activeUser.weekStreak} label="Week Streak" />
-                </div>
-              </div>
-              <div className="app-card p-5">
-                <div className="grid grid-cols-[1fr_76px] items-center gap-4">
-                  <div>
-                    <h2 className="font-pixel text-[14px] leading-6 text-[#211044]">Level {activeUser.level}</h2>
-                    <p className="mt-1 text-sm font-bold text-slate-dark">{activeUser.rank}</p>
-                    <div className="mt-4">
-                      <XPBar value={levelValue} max={levelMax} level={activeUser.level} />
-                    </div>
-                  </div>
-                  <Image src={ui.icons.shield} alt="" width={82} height={82} className="h-20 w-20 object-contain" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-[1.05fr_1.15fr_1fr]">
-              <div className="app-card p-5">
-                <div className="mb-4 flex items-center gap-3">
-                  <Image src={ui.icons.target} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
-                  <h2 className="font-pixel text-[11px] leading-5 text-[#211044]">Daily Mission</h2>
-                </div>
-                <MissionCard mission={missions[0]} />
-              </div>
-              <Link href={continueModule?._id ? `/learn/${continueModule._id}` : '/learn'} className="app-card group flex min-h-[184px] flex-col justify-between p-5 text-ube-royal">
-                <div className="flex items-center gap-3">
-                  <Image src={categoryImage(continueModule?.icon)} alt="" width={58} height={58} className="h-14 w-14 object-contain" />
-                  <div>
-                    <h2 className="font-pixel text-[11px] leading-5 text-[#211044]">Continue Learning</h2>
-                    <p className="mt-2 text-sm font-bold">{continueModule?.title || 'The Prophecy of the Phishing Serpent'}</p>
-                    <p className="text-xs text-slate-dark">{continueModule?.percentComplete ? 'Chapter in progress' : 'No chapters started'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ded2ea]">
-                    <div className="h-full rounded-full bg-[#73c151]" style={{ width: `${continueModule?.percentComplete ?? 0}%` }} />
-                  </div>
-                  <span className="font-bold text-xs">{continueModule?.percentComplete ?? 0}%</span>
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-lavender text-lg transition group-hover:translate-x-1">-&gt;</span>
-                </div>
-              </Link>
-              <div className="app-card grid grid-cols-[1fr_88px] items-end gap-4 p-5">
-                <div>
-                  <h2 className="font-pixel text-[11px] leading-5 text-[#211044]">Scam Awareness Tip</h2>
-                  <p className="mt-4 text-xs font-semibold leading-5 text-slate-dark">{dailyTip.text}</p>
-                </div>
-                <Image src={ui.mascots.heroine} alt="" width={80} height={116} className="h-28 w-auto object-contain object-bottom" />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Link href="/battlefield" className="app-card group grid min-h-[142px] grid-cols-[1fr_92px] items-center overflow-hidden bg-gradient-to-br from-[#25104f] to-[#5e3aad] p-5 text-white">
-                <div>
-                  <p className="font-pixel text-[10px] uppercase leading-5 text-teal">Play</p>
-                  <h2 className="mt-2 font-pixel text-[13px] leading-6">Enter Battlefield</h2>
-                  <p className="mt-3 text-sm font-semibold leading-6 text-white/72">Fight scam threats with quick quiz counters.</p>
-                </div>
-                <Image src={ui.icons.shield} alt="" width={92} height={92} className="h-20 w-20 object-contain transition group-hover:scale-105" />
-              </Link>
-              <Link href="/review" className="app-card group grid min-h-[142px] grid-cols-[1fr_92px] items-center overflow-hidden bg-white/94 p-5 text-ube-royal">
-                <div>
-                  <p className="font-pixel text-[10px] uppercase leading-5 text-ube-deep">Review</p>
-                  <h2 className="mt-2 font-pixel text-[13px] leading-6">Flashcards</h2>
-                  <p className="mt-3 text-sm font-semibold leading-6 text-slate-dark">Practice core safety rules between battles.</p>
-                </div>
-                <Image src={ui.icons.book} alt="" width={92} height={92} className="h-20 w-20 object-contain transition group-hover:scale-105" />
-              </Link>
-            </div>
-
-            <section>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="font-pixel text-[13px] text-[#211044]">Recommended For You</h2>
-                <Link href="/learn" className="text-sm font-bold text-ube-deep">View all</Link>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {recommended.map((module) => (
-                  <ModuleCard
-                    key={module._id}
-                    title={module.title}
-                    subtitle={`${module.completionXP} Essence reward`}
-                    icon={module.icon}
-                    progress={module.percentComplete || 0}
-                    difficulty={module.difficulty}
-                    href={`/learn/${module._id}`}
-                  />
                 ))}
+              </div>
+              <Link href="/learn" className="pixel-button-gold mx-auto mt-5 block max-w-md px-5 py-4 text-center text-[11px]">
+                View All Prophecies
+              </Link>
+            </section>
+
+            <section className="pixel-panel p-5">
+              <div className="mb-4 flex justify-center">
+                <h2 className="pixel-title-ribbon px-8 py-2 text-[12px] leading-5">Daily Missions</h2>
+              </div>
+              <div className="grid gap-3">
+                {missionRows.map((mission, index) => {
+                  const complete = mission.progress >= mission.target;
+                  const icons = [ui.dashboard?.serpent || '/assets/dashboard assets v2/dashboard_icon_serpent.png', ui.menu.scroll, ui.menu.banner, ui.menu.swords];
+                  return (
+                    <div key={mission.id} className="grid grid-cols-[64px_1fr_auto_auto] items-center gap-3 border-2 border-white/10 bg-black/22 p-3">
+                      <Image src={icons[index] || ui.menu.scroll} alt="" width={58} height={58} className="h-14 w-14 object-contain" />
+                      <div>
+                        <p className="font-pixel text-[11px] leading-5 text-white">{mission.label}</p>
+                        <p className="text-sm font-bold text-white/56">{index === 0 ? 'Defeat phishing attempts.' : index === 1 ? 'Advance your knowledge.' : index === 2 ? 'Review your privacy shield.' : 'Grow the Shield Guild.'}</p>
+                      </div>
+                      <span className={`font-pixel text-[11px] ${complete ? 'text-[#4bd466]' : 'text-red-400'}`}>{mission.progress} / {mission.target}</span>
+                      <span className="flex items-center gap-2 font-pixel text-[11px] text-white">
+                        <Image src="/assets/dashboard assets v2/dashboard_gem_purple_1.png" alt="" width={24} height={24} className="h-7 w-7 object-contain" />
+                        {mission.xp}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_120px] sm:items-center">
+                <div className="pixel-panel-light p-4">
+                  <p className="font-pixel text-[11px] leading-5">Kaalaman ang sandata.</p>
+                  <p className="mt-2 text-sm font-black leading-6">{dailyTip.text}</p>
+                </div>
+                <Image src={ui.decor.chest} alt="" width={130} height={110} className="mx-auto h-24 w-auto object-contain" />
               </div>
             </section>
           </div>
