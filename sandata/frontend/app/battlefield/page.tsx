@@ -722,7 +722,7 @@ export default function BattlefieldPage() {
             </section>
           </header>
 
-          <section className="relative grid min-h-[345px] items-end py-3">
+          <section className="relative grid min-h-[300px] items-center py-2 sm:min-h-[330px] lg:min-h-[360px] xl:min-h-[385px]">
             {attackSide ? (
               <div
                 className={cn(
@@ -737,31 +737,27 @@ export default function BattlefieldPage() {
               </div>
             ) : null}
 
-            <div className="absolute left-2 top-7 hidden w-28 border-4 border-[#0b0610] bg-[#3b185d] px-3 py-4 text-center shadow-[0_0_0_2px_#d89824] xl:block">
-              <p className="font-pixel text-[10px] leading-6 text-gold">SanData</p>
-              <Image src={ui.shieldLogo} alt="" width={74} height={74} className="mx-auto mt-3 h-16 w-16 object-contain" />
-            </div>
             <div className="absolute right-2 top-7 hidden w-28 border-4 border-[#0b0610] bg-[#3b185d] px-3 py-4 text-center shadow-[0_0_0_2px_#d89824] xl:block">
               <p className="font-pixel text-[10px] leading-7 text-gold">Think Before You Click!</p>
             </div>
 
-            <div className="absolute left-1/2 top-2 z-20 w-[min(430px,86vw)] -translate-x-1/2 border-4 border-[#0b0610] bg-[#fff1d2] px-4 py-3 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
-              <p className="font-pixel text-[10px] leading-5 sm:text-[11px] sm:leading-6">{question.questionText}</p>
+            <div className="absolute left-1/2 top-0 z-20 w-[min(520px,82vw)] -translate-x-1/2 border-4 border-[#0b0610] bg-[#fff1d2] px-4 py-3 text-center text-[#201136] shadow-[0_0_0_2px_#9b6427]">
+              <p className="font-pixel text-[9px] leading-5 sm:text-[10px]">{question.questionText}</p>
             </div>
 
             {ally ? (
-              <div className="absolute left-1/2 top-[92px] z-20 w-[min(520px,88vw)] -translate-x-1/2 border-2 border-[#0b0610] bg-[#211329]/94 px-3 py-2 text-center font-pixel text-[8px] leading-4 text-gold shadow-[0_0_0_2px_#9b6427]">
+              <div className="absolute left-1/2 top-[126px] z-20 w-[min(520px,88vw)] -translate-x-1/2 border-2 border-[#0b0610] bg-[#211329]/94 px-3 py-2 text-center font-pixel text-[8px] leading-4 text-gold shadow-[0_0_0_2px_#9b6427]">
                 Your lane {questionIndex + 1}/{questions.length} - {ally.username} has a separate {allyQuestions.length}-question set
               </div>
             ) : null}
 
-            <div className="absolute left-[15%] top-20 z-20 hidden w-[min(390px,30vw)] lg:block">
-              <div className="pixel-panel min-h-16 p-3">
-                <p className="font-pixel text-[10px] leading-5 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
+            <div className="absolute left-1/2 top-[68px] z-20 w-[min(520px,82vw)] -translate-x-1/2">
+              <div className="pixel-panel min-h-14 px-3 py-2 text-center">
+                <p className="font-pixel text-[8px] leading-4 text-white/78 sm:text-[9px]">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
               </div>
             </div>
 
-            <div className="battle-duel-grid mx-auto w-full max-w-4xl">
+            <div className="battle-duel-grid mx-auto w-full max-w-3xl xl:max-w-4xl">
               <div className="battle-fighter-slot battle-fighter-slot-player">
                 <div className={cn('battle-fighter-stage', ally && 'battle-fighter-stage-coop')}>
                   {ally ? (
@@ -816,7 +812,7 @@ export default function BattlefieldPage() {
             </div>
           </section>
 
-          <footer className="relative">
+          <footer className="relative z-30">
             {result ? (
               <section className="pixel-panel mx-auto mb-5 max-w-3xl p-5 text-center">
                 <h2 className="font-pixel text-2xl leading-10 text-gold">{result.outcome === 'win' ? 'Victory Secured' : 'Battle Complete'}</h2>
@@ -830,7 +826,7 @@ export default function BattlefieldPage() {
               </section>
             ) : (
               <>
-                <div className="grid gap-3 lg:grid-cols-4">
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                   {question.options.map((option, optionIndex) => {
                     let state = 'border-[#0b0610] bg-[#150d1d] text-white';
                     if (selectedAnswer !== null && feedback) {
@@ -844,10 +840,10 @@ export default function BattlefieldPage() {
                         type="button"
                         disabled={selectedAnswer !== null}
                         onClick={() => choose(optionIndex)}
-                        className={cn('grid min-h-[84px] grid-cols-[56px_1fr] items-center gap-3 border-4 p-3 text-left shadow-[0_0_0_2px_#9b6427,inset_0_0_0_2px_rgba(255,224,101,0.12)] transition hover:-translate-y-1 disabled:cursor-default', state)}
+                        className={cn('grid min-h-[72px] grid-cols-[44px_1fr] items-center gap-2 border-4 p-2 text-left shadow-[0_0_0_2px_#9b6427,inset_0_0_0_2px_rgba(255,224,101,0.12)] transition hover:-translate-y-1 disabled:cursor-default', state)}
                       >
-                        <span className="grid h-12 w-12 place-items-center border-4 border-[#0b0610] bg-[#5c2587] font-pixel text-2xl text-white shadow-[0_0_0_2px_#d89824]">{String.fromCharCode(65 + optionIndex)}.</span>
-                        <span className="font-pixel text-[13px] leading-6">{option}</span>
+                        <span className="grid h-10 w-10 place-items-center border-4 border-[#0b0610] bg-[#5c2587] font-pixel text-xl text-white shadow-[0_0_0_2px_#d89824]">{String.fromCharCode(65 + optionIndex)}.</span>
+                        <span className="font-pixel text-[10px] leading-5 sm:text-[11px]">{option}</span>
                       </button>
                     );
                   })}
