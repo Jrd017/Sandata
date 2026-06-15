@@ -409,6 +409,118 @@ input:focus-visible {
   animation: battle-hit 680ms steps(4, end);
 }
 
+.battle-impact-frame {
+  --impact-x: 70%;
+  --impact-y: 62%;
+  --impact-line-angle: -16deg;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  animation: impact-frame 560ms steps(5, end);
+}
+
+.battle-impact-enemy {
+  --impact-x: 30%;
+  --impact-line-angle: 16deg;
+}
+
+.battle-impact-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at var(--impact-x) var(--impact-y), rgba(255, 255, 255, 0.82) 0 4%, rgba(255, 212, 92, 0.55) 5% 10%, transparent 18%),
+    linear-gradient(90deg, transparent 0 45%, rgba(255, 255, 255, 0.5) 48% 52%, transparent 56%),
+    rgba(255, 255, 255, 0.16);
+}
+
+.battle-impact-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 7px),
+    radial-gradient(circle at var(--impact-x) var(--impact-y), rgba(252, 73, 62, 0.38), transparent 34%);
+  mix-blend-mode: screen;
+}
+
+.battle-impact-frame span {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  display: block;
+  background: #fff7d7;
+  box-shadow:
+    0 0 0 3px #08050c,
+    0 0 0 6px #ffd45c,
+    0 0 22px rgba(255, 212, 92, 0.76);
+  transform-origin: center;
+  animation: impact-burst 560ms steps(5, end);
+}
+
+.battle-impact-frame span:nth-child(1) {
+  height: 12px;
+  width: 190px;
+  transform: translate(-50%, -50%) rotate(var(--impact-line-angle));
+}
+
+.battle-impact-frame span:nth-child(2) {
+  height: 12px;
+  width: 150px;
+  transform: translate(-50%, -50%) rotate(calc(var(--impact-line-angle) + 88deg));
+}
+
+.battle-impact-frame span:nth-child(3) {
+  height: 78px;
+  width: 78px;
+  border: 5px solid #08050c;
+  background: rgba(255, 212, 92, 0.7);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+@keyframes impact-frame {
+  0% {
+    opacity: 0;
+    filter: brightness(1) contrast(1);
+  }
+  8% {
+    opacity: 1;
+    filter: brightness(2.2) contrast(1.45) saturate(1.2);
+  }
+  22% {
+    opacity: 0.9;
+    filter: brightness(1.5) contrast(1.25);
+  }
+  46% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes impact-burst {
+  0% {
+    opacity: 0;
+    scale: 0.35;
+  }
+  8% {
+    opacity: 1;
+    scale: 1;
+  }
+  34% {
+    opacity: 0.85;
+    scale: 1.16;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.45;
+  }
+}
+
 @keyframes player-strike {
   0% {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));

@@ -156,14 +156,14 @@ export default function DashboardPage() {
 
             <section className="grid gap-5 sm:grid-cols-3 xl:grid-cols-3">
               {[
-                { image: ui.dashboard?.dayStreak || '/assets/dashboard assets v2/dashboard_stat_day_streak.png', label: 'Day Streak', value: activeUser.dayStreak || 0, copy: 'Keep the fire burning!' },
-                { image: '/assets/dashboard assets v2/dashboard_stat_total_essence.png', label: 'Total Essence', value: activeUser.totalXP.toLocaleString(), copy: 'Essence fuels your journey.' },
-                { image: '/assets/dashboard assets v2/dashboard_stat_spirit_shards.png', label: 'Spirit Shards', value: Math.max(0, Math.round(activeUser.totalXP / 6)).toLocaleString(), copy: 'Shards of wisdom.' },
+                { icon: ui.dashboard.dayStreakIcon, label: 'Day Streak', value: activeUser.dayStreak || 0, copy: 'Keep the fire burning!' },
+                { icon: ui.dashboard.totalEssenceIcon, label: 'Total Essence', value: activeUser.totalXP.toLocaleString(), copy: 'Essence fuels your journey.' },
+                { icon: ui.dashboard.spiritShardsIcon, label: 'Spirit Shards', value: Math.max(0, Math.round(activeUser.totalXP / 6)).toLocaleString(), copy: 'Shards of wisdom.' },
               ].map((stat) => (
-                <div key={stat.label} className="pixel-panel grid min-h-[230px] place-items-center p-4 text-center">
+                <div key={stat.label} className="pixel-panel grid min-h-[220px] place-items-center p-4 text-center">
                   <h2 className="font-pixel text-[13px] uppercase leading-6 text-gold">{stat.label}</h2>
-                  <Image src={stat.image} alt="" width={118} height={118} className="mt-4 h-24 w-24 object-contain" />
-                  <div className="pixel-stat-value mt-4 text-3xl leading-10">{stat.value}</div>
+                  <Image src={stat.icon} alt="" width={104} height={104} className="mt-4 h-20 w-20 object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.52)]" />
+                  <div className="pixel-stat-value mt-3 text-3xl leading-10">{stat.value}</div>
                   <p className="mt-2 text-sm font-bold leading-6 text-[#e6c99a]">{stat.copy}</p>
                 </div>
               ))}

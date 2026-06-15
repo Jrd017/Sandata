@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -146,6 +146,7 @@ function EnemyCard({
 
 export default function BattlefieldPage() {
   const { user, setUser } = useStore();
+  const impactAudioRef = useRef<HTMLAudioElement | null>(null);
   const [phase, setPhase] = useState<Phase>('lobby');
   const [selectedEnemyId, setSelectedEnemyId] = useState(battleEnemies[0].id);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -184,6 +185,15 @@ export default function BattlefieldPage() {
     const timeout = window.setTimeout(() => setAttackSide(null), 680);
     return () => window.clearTimeout(timeout);
   }, [attackSide]);
+
+  function playImpactSound() {
+    const audio = impactAudioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    audio.volume = 0.9;
+    void audio.play().catch(() => undefined);
+  }
 
   function selectEnemy(enemyId: string) {
     setSelectedEnemyId(enemyId);
@@ -269,6 +279,7 @@ export default function BattlefieldPage() {
       explanation: question.explanation || (isCorrect ? 'Your counter lands cleanly.' : 'The attack slips through. Verify before acting.'),
     });
     setAttackSide(isCorrect ? 'player' : 'enemy');
+    playImpactSound();
 
     const strikeDamage = Math.ceil(enemy.maxHP / questions.length);
     setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : 8)));
@@ -441,6 +452,7 @@ export default function BattlefieldPage() {
       style={{ backgroundImage: `linear-gradient(180deg, rgba(4, 5, 7, 0.18), rgba(4, 5, 7, 0.3)), url(${ui.backgrounds.battlefield})` }}
     >
       <section className="pixel-screen-border relative mx-auto min-h-[calc(100dvh-2rem)] max-w-[1500px] overflow-hidden bg-transparent">
+        <audio ref={impactAudioRef} src={ui.audio.impact} preload="auto" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.16))]" />
         <div className="relative z-10 grid min-h-[calc(100dvh-2rem)] grid-rows-[auto_1fr_auto] px-3 py-3 sm:px-6">
           <header className="relative grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px_minmax(0,1fr)] lg:items-start">
@@ -458,7 +470,7 @@ export default function BattlefieldPage() {
 
             <div className="grid justify-center justify-items-center">
               <Image src={ui.logo} alt="SanData Quiz Fight" width={320} height={130} priority className="h-auto w-[220px] object-contain sm:w-[270px]" />
-              <MusicToggle className="mt-2 scale-90" src={ui.audio.battlefield} label="Battle Music" />
+              <MusicToggle className="mt-2 scale-90" src={ui.audio.battlefieldFight} label="Battle Music" />
             </div>
 
             <section className="pixel-panel grid grid-cols-[1fr_82px] items-center gap-3 p-2">
@@ -476,6 +488,20 @@ export default function BattlefieldPage() {
           </header>
 
           <section className="relative grid min-h-[345px] items-end py-3">
+            {attackSide ? (
+              <div
+                className={cn(
+                  'battle-impact-frame',
+                  attackSide === 'player' ? 'battle-impact-player' : 'battle-impact-enemy',
+                )}
+                aria-hidden
+              >
+                <span />
+                <span />
+                <span />
+              </div>
+            ) : null}
+
             <div className="absolute left-2 top-7 hidden w-28 border-4 border-[#0b0610] bg-[#3b185d] px-3 py-4 text-center shadow-[0_0_0_2px_#d89824] xl:block">
               <p className="font-pixel text-[10px] leading-6 text-gold">SanData</p>
               <Image src={ui.shieldLogo} alt="" width={74} height={74} className="mx-auto mt-3 h-16 w-16 object-contain" />

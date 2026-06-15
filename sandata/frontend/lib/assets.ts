@@ -104,6 +104,9 @@ export const ui = {
     dayStreak: '/assets/dashboard assets v2/dashboard_stat_day_streak.png',
     totalEssence: '/assets/dashboard assets v2/dashboard_stat_total_essence.png',
     spiritShards: '/assets/dashboard assets v2/dashboard_stat_spirit_shards.png',
+    dayStreakIcon: '/assets/dashboard assets v2/dashboard_icon_day_streak_fire.png',
+    totalEssenceIcon: '/assets/dashboard assets v2/dashboard_icon_total_essence.png',
+    spiritShardsIcon: '/assets/dashboard assets v2/dashboard_icon_spirit_shards.png',
     serpent: '/assets/dashboard assets v2/dashboard_icon_serpent.png',
     shield: '/assets/dashboard assets v2/dashboard_icon_shield.png',
     swords: '/assets/dashboard assets v2/dashboard_icon_swords.png',
@@ -156,6 +159,8 @@ export const ui = {
     login: '/assets/audio/medieval-login.wav',
     dashboard: '/assets/audio/medieval-dashboard.wav',
     battlefield: '/assets/audio/medieval-battlefield.wav',
+    battlefieldFight: '/assets/audio/medieval-battlefield-fight.wav',
+    impact: '/assets/audio/impact-8bit.wav',
   },
 };
 
