@@ -308,6 +308,25 @@ input:focus-visible {
   width: clamp(165px, 16vw, 225px);
 }
 
+.battle-lobby-avatar {
+  filter:
+    drop-shadow(0 12px 10px rgba(0, 0, 0, 0.52))
+    drop-shadow(0 0 10px rgba(255, 212, 92, 0.14));
+  animation: lobby-avatar-float 3s ease-in-out infinite;
+}
+
+.battle-lobby-avatar-ally {
+  animation-delay: -1.35s;
+}
+
+.battle-fighter-stage-coop {
+  width: clamp(210px, 24vw, 315px);
+}
+
+.battle-fighter-stage-coop::after {
+  width: 92%;
+}
+
 .battle-fighter-stage::after {
   content: "";
   position: absolute;
@@ -345,6 +364,22 @@ input:focus-visible {
 .battle-fighter-enemy {
   --sprite-facing: -1;
   --sprite-scale: 1;
+}
+
+.battle-fighter-ally {
+  --sprite-scale: 0.72;
+  position: absolute;
+  bottom: 0;
+  left: -16%;
+  z-index: 1;
+  height: 82% !important;
+  opacity: 0.95;
+  animation: ally-support-float 2.7s ease-in-out infinite;
+}
+
+.battle-fighter-stage-coop .battle-fighter-player {
+  --sprite-scale: 0.9;
+  z-index: 2;
 }
 
 .battle-clash {
@@ -407,6 +442,10 @@ input:focus-visible {
 
 .battle-fighter-hit {
   animation: battle-hit 680ms steps(4, end);
+}
+
+.battle-fighter-ally-attack {
+  animation: ally-support-strike 680ms steps(5, end);
 }
 
 .battle-impact-frame {
@@ -570,6 +609,26 @@ input:focus-visible {
   }
 }
 
+@keyframes lobby-avatar-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes ally-support-float {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+  50% {
+    transform: translateY(-7px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+}
+
 @keyframes player-strike {
   0% {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
@@ -597,6 +656,21 @@ input:focus-visible {
   }
   100% {
     transform: translateX(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+}
+
+@keyframes ally-support-strike {
+  0% {
+    transform: translateX(0) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+  34% {
+    transform: translateX(28px) translateY(-10px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+  58% {
+    transform: translateX(20px) translateY(-3px) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
+  }
+  100% {
+    transform: translateX(0) translateY(0) scaleX(var(--sprite-facing)) scale(var(--sprite-scale));
   }
 }
 
@@ -854,6 +928,19 @@ input:focus-visible {
   .battle-fighter-stage {
     height: 178px;
     width: 178px;
+  }
+
+  .battle-fighter-stage-coop {
+    width: 230px;
+  }
+
+  .battle-fighter-stage-coop .battle-fighter-player {
+    --sprite-scale: 0.78;
+  }
+
+  .battle-fighter-ally {
+    left: -8%;
+    height: 68% !important;
   }
 
   .battle-clash {

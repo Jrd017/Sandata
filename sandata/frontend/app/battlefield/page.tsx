@@ -1,13 +1,13 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Copy, RotateCcw } from 'lucide-react';
 import { MusicToggle } from '@/components/MusicToggle';
 import api from '@/lib/api';
-import { avatarFightingImage, avatarIconImage, ui } from '@/lib/assets';
+import { avatarFightingImage, avatarIconImage, avatarImage, ui } from '@/lib/assets';
 import { battleEnemies } from '@/lib/data';
 import { cn } from '@/lib/cn';
 import { hasSupabaseConfig } from '@/lib/supabase';
@@ -29,8 +29,28 @@ type Result = {
   scorePercent: number;
   xpAwarded: number;
 } | null;
+type RoomPlayer = {
+  avatar: string;
+  id?: string;
+  username: string;
+};
+type BattleRoomPayload = {
+  code?: string;
+  host?: Partial<RoomPlayer> | string;
+  players?: Array<Partial<RoomPlayer> | string>;
+  status?: string;
+};
+type RoomRole = 'solo' | 'host' | 'guest';
 
 const playerMaxHP = 120;
+const coOpQuestionCount = 10;
+const coOpDamageMultiplier = 2;
+const coOpEnemyHealthMultiplier = 2.4;
+const fallbackAlly: RoomPlayer = {
+  avatar: 'character_2',
+  id: 'local-fellow-agent',
+  username: 'Fellow Agent',
+};
 
 const fallbackUser: User = {
   id: 'local-shield-agent',
@@ -67,6 +87,30 @@ function createLocalRoomCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function normalizeRoomPlayer(player?: Partial<RoomPlayer> | string | null): RoomPlayer | null {
+  if (!player) return null;
+  if (typeof player === 'string') {
+    return {
+      avatar: 'character_1',
+      id: player,
+      username: player,
+    };
+  }
+
+  const username = player.username?.trim() || 'Fellow Agent';
+  return {
+    avatar: player.avatar || 'character_2',
+    id: player.id,
+    username,
+  };
+}
+
+function sameRoomPlayer(player: RoomPlayer | null, activeUser: User) {
+  if (!player) return false;
+  if (player.id && activeUser.id) return String(player.id) === String(activeUser.id);
+  return player.username.trim().toLowerCase() === activeUser.username.trim().toLowerCase();
+}
+
 function applyLocalBattleResult(user: User | null, xpAwarded: number, scorePercent: number) {
   const base = user || fallbackUser;
   const totalXP = base.totalXP + xpAwarded;
@@ -87,6 +131,28 @@ function applyLocalBattleResult(user: User | null, xpAwarded: number, scorePerce
   };
 }
 
+function getBattleEnemyMaxHP(enemy: BattleEnemy, coOpActive: boolean) {
+  return coOpActive ? Math.round(enemy.maxHP * coOpEnemyHealthMultiplier) : enemy.maxHP;
+}
+
+function buildBattleQuestions(enemy: BattleEnemy, coOpActive: boolean, lane: 'player' | 'ally') {
+  if (!coOpActive) return enemy.questions;
+
+  const allQuestions = [
+    ...enemy.questions,
+    ...battleEnemies.filter((item) => item.id !== enemy.id).flatMap((item) => item.questions),
+  ];
+  const offset = lane === 'ally' ? Math.max(enemy.questions.length, Math.floor(allQuestions.length / 2)) : 0;
+
+  return Array.from({ length: coOpQuestionCount }, (_, index) => {
+    const source = allQuestions[(index + offset) % allQuestions.length];
+    return {
+      ...source,
+      id: `${source.id}-${lane}-${index}`,
+    };
+  });
+}
+
 function HealthMeter({ current, max, tone }: { current: number; max: number; tone: 'green' | 'red' }) {
   const percent = Math.round((Math.max(0, current) / Math.max(max, 1)) * 100);
   return (
@@ -104,11 +170,17 @@ function HealthMeter({ current, max, tone }: { current: number; max: number; ton
 }
 
 function EnemyCard({
+  coOpActive,
   enemy,
+  maxHP,
+  questionCount,
   selected,
   onSelect,
 }: {
+  coOpActive: boolean;
   enemy: BattleEnemy;
+  maxHP: number;
+  questionCount: number;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -138,7 +210,8 @@ function EnemyCard({
       </div>
       <div className="grid gap-2 text-xs font-bold leading-5 text-white/68">
         <p>Weakness: <span className="text-white">{enemy.weakness}</span></p>
-        <p>{enemy.questions.length} question battle set</p>
+        <p>{questionCount} question{coOpActive ? 's each' : ''} battle set</p>
+        <p>Enemy HP: <span className="text-white">{maxHP}</span>{coOpActive ? <span className="text-gold"> - co-op raid</span> : null}</p>
       </div>
     </button>
   );
@@ -164,16 +237,51 @@ export default function BattlefieldPage() {
   const [roomCode, setRoomCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [allyJoined, setAllyJoined] = useState(false);
+  const [allyPlayer, setAllyPlayer] = useState<RoomPlayer | null>(null);
+  const [roomRole, setRoomRole] = useState<RoomRole>('solo');
   const [roomStatus, setRoomStatus] = useState('Create a private code or enter one from a friend.');
 
   const activeUser = user || fallbackUser;
+  const ally = allyPlayer || (allyJoined ? fallbackAlly : null);
+  const coOpActive = Boolean(ally);
   const enemy = battleEnemies.find((item) => item.id === selectedEnemyId) || battleEnemies[0];
-  const questions = enemy.questions;
-  const question = questions[questionIndex];
+  const enemyMaxHP = getBattleEnemyMaxHP(enemy, coOpActive);
+  const playerQuestionLane = roomRole === 'guest' ? 'ally' : 'player';
+  const partnerQuestionLane = playerQuestionLane === 'player' ? 'ally' : 'player';
+  const questions = useMemo(() => buildBattleQuestions(enemy, coOpActive, playerQuestionLane), [coOpActive, enemy, playerQuestionLane]);
+  const allyQuestions = useMemo(() => buildBattleQuestions(enemy, coOpActive, partnerQuestionLane), [coOpActive, enemy, partnerQuestionLane]);
+  const question = questions[questionIndex] || questions[0];
   const correctCount = useMemo(
     () => answers.reduce((sum, answer, index) => sum + (answer === questions[index]?.correctIndex ? 1 : 0), 0),
     [answers, questions],
   );
+
+  const applyRoomPayload = useCallback((payload: BattleRoomPayload | null, waitingMessage?: string) => {
+    if (!payload) return;
+
+    const host = normalizeRoomPlayer(payload.host);
+    const players = (payload.players || [])
+      .map((player) => normalizeRoomPlayer(player))
+      .filter((player): player is RoomPlayer => Boolean(player));
+    const allPlayers = players.length ? players : host ? [host] : [];
+    const nextAlly = allPlayers.find((player) => !sameRoomPlayer(player, activeUser)) || null;
+
+    setAllyPlayer(nextAlly);
+    setAllyJoined(Boolean(nextAlly));
+    if (host) setRoomRole(sameRoomPlayer(host, activeUser) ? 'host' : 'guest');
+    else setRoomRole(nextAlly ? 'guest' : 'solo');
+
+    if (payload.code) {
+      setRoomCode(payload.code);
+      setJoinCode(payload.code);
+    }
+
+    if (nextAlly) {
+      setRoomStatus(`${nextAlly.username} joined. Co-op raid ready: 10 questions each, double damage.`);
+    } else if (waitingMessage) {
+      setRoomStatus(waitingMessage);
+    }
+  }, [activeUser]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -188,6 +296,41 @@ export default function BattlefieldPage() {
     const timeout = window.setTimeout(() => setAttackSide(null), 820);
     return () => window.clearTimeout(timeout);
   }, [attackSide]);
+
+  useEffect(() => {
+    if (phase === 'lobby') setEnemyHP(enemyMaxHP);
+  }, [enemyMaxHP, phase]);
+
+  useEffect(() => {
+    if (!roomCode || typeof window === 'undefined') return undefined;
+
+    let cancelled = false;
+    const waitingMessage = roomRole === 'guest'
+      ? 'Joined room. Waiting for the host or second player.'
+      : 'Private room ready. Waiting for your friend to join.';
+
+    async function syncRoom() {
+      try {
+        const { data } = await api.get(`/battlefield/rooms/${roomCode}`);
+        if (!cancelled) applyRoomPayload(data, waitingMessage);
+      } catch {
+        try {
+          const raw = localStorage.getItem(`sandata-room-${roomCode}`);
+          if (!raw || cancelled) return;
+          applyRoomPayload(JSON.parse(raw), waitingMessage);
+        } catch {
+          // Local preview rooms are optional and can disappear between tabs.
+        }
+      }
+    }
+
+    void syncRoom();
+    const interval = window.setInterval(syncRoom, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [applyRoomPayload, roomCode, roomRole]);
 
   function playOneShot(audio: HTMLAudioElement | null, volume = 0.9) {
     if (!audio) return;
@@ -204,7 +347,7 @@ export default function BattlefieldPage() {
   function selectEnemy(enemyId: string) {
     setSelectedEnemyId(enemyId);
     const nextEnemy = battleEnemies.find((item) => item.id === enemyId) || battleEnemies[0];
-    setEnemyHP(nextEnemy.maxHP);
+    setEnemyHP(getBattleEnemyMaxHP(nextEnemy, coOpActive));
     setQuestionIndex(0);
     setAnswers([]);
     setSelectedAnswer(null);
@@ -221,25 +364,37 @@ export default function BattlefieldPage() {
     setFeedback(null);
     setAttackSide(null);
     setPlayerHP(playerMaxHP);
-    setEnemyHP(enemy.maxHP);
+    setEnemyHP(enemyMaxHP);
     setResult(null);
   }
 
   async function createRoom() {
     let code = createLocalRoomCode();
+    const hostPlayer: RoomPlayer = {
+      avatar: activeUser.avatar || 'character_1',
+      id: activeUser.id,
+      username: activeUser.username || 'Shield Agent',
+    };
+
     try {
       const { data } = await api.post('/battlefield/rooms', {});
       code = data.code;
+      applyRoomPayload(data, 'Private room ready. Waiting for your friend to join.');
     } catch {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`sandata-room-${code}`, JSON.stringify({ code, host: activeUser.username, enemy: enemy.id, createdAt: Date.now() }));
+        const localRoom: BattleRoomPayload = {
+          code,
+          host: hostPlayer,
+          players: [hostPlayer],
+          status: 'waiting',
+        };
+        localStorage.setItem(`sandata-room-${code}`, JSON.stringify({ ...localRoom, enemy: enemy.id, createdAt: Date.now() }));
+        applyRoomPayload(localRoom, 'Private room ready. Waiting for your friend to join.');
       }
     }
 
     setRoomCode(code);
     setJoinCode(code);
-    setAllyJoined(false);
-    setRoomStatus('Private room ready. Share this code with a friend, then choose Play Now.');
     toast.success('Battle room created');
   }
 
@@ -259,14 +414,45 @@ export default function BattlefieldPage() {
 
     try {
       const { data } = await api.post(`/battlefield/rooms/${code}/join`, {});
-      setRoomCode(data.code);
-      setAllyJoined(data.players?.length > 1);
-      setRoomStatus(data.players?.length > 1 ? 'Friend joined. Select an enemy and start the fight.' : 'Joined room. Waiting for another player.');
+      applyRoomPayload(data, data.players?.length > 1 ? undefined : 'Joined room. Waiting for another player.');
       toast.success('Joined battle room');
     } catch {
-      setRoomCode(code);
-      setAllyJoined(true);
-      setRoomStatus('Joined room locally. Select an enemy and start the fight.');
+      const guestPlayer: RoomPlayer = {
+        avatar: activeUser.avatar || 'character_2',
+        id: `${activeUser.id || 'local-shield-agent'}-guest`,
+        username: activeUser.username || 'Shield Agent',
+      };
+      const fallbackHost: RoomPlayer = {
+        avatar: 'character_3',
+        id: `local-host-${code}`,
+        username: 'Host Agent',
+      };
+      let localRoom: BattleRoomPayload = {
+        code,
+        host: fallbackHost,
+        players: [fallbackHost, guestPlayer],
+        status: 'ready',
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem(`sandata-room-${code}`);
+          const parsed = raw ? JSON.parse(raw) : null;
+          const host = normalizeRoomPlayer(parsed?.host) || normalizeRoomPlayer(parsed?.players?.[0]) || fallbackHost;
+          localRoom = {
+            ...parsed,
+            code,
+            host,
+            players: [host, guestPlayer],
+            status: 'ready',
+          };
+          localStorage.setItem(`sandata-room-${code}`, JSON.stringify(localRoom));
+        } catch {
+          localStorage.setItem(`sandata-room-${code}`, JSON.stringify(localRoom));
+        }
+      }
+
+      applyRoomPayload(localRoom);
       toast.success('Joined room');
     }
   }
@@ -288,8 +474,8 @@ export default function BattlefieldPage() {
     playOneShot(impactAudioRef.current, 0.98);
     if (!isCorrect) playOneShot(hurtAudioRef.current, 0.88);
 
-    const strikeDamage = Math.ceil(enemy.maxHP / questions.length);
-    setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : 8)));
+    const strikeDamage = Math.ceil(enemyMaxHP / questions.length) * (coOpActive ? coOpDamageMultiplier : 1);
+    setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : coOpActive ? 12 : 8)));
     setPlayerHP((current) => Math.max(0, current - (isCorrect ? 4 : 28)));
   }
 
@@ -360,7 +546,7 @@ export default function BattlefieldPage() {
     setFeedback(null);
     setAttackSide(null);
     setPlayerHP(playerMaxHP);
-    setEnemyHP(enemy.maxHP);
+    setEnemyHP(enemyMaxHP);
     setResult(null);
     setSubmitting(false);
   }
@@ -384,12 +570,32 @@ export default function BattlefieldPage() {
                 <div className="mb-4 flex justify-center">
                   <h1 className="pixel-title-ribbon px-7 py-2 text-[12px] leading-6">Battle Gate</h1>
                 </div>
-                <div className="grid grid-cols-[84px_1fr] items-center gap-4">
-                  <Image src={avatarIconImage(activeUser.avatar)} alt="" width={90} height={110} className="h-24 w-20 object-contain" />
-                  <div>
-                    <p className="font-pixel text-[13px] leading-6 text-white">{activeUser.username || 'Shield Agent'}</p>
-                    <p className="text-sm font-bold text-white/60">{activeUser.rank}</p>
-                    <p className="mt-3 text-xs font-black uppercase text-gold">{allyJoined ? 'Ally Linked' : 'Solo Ready'}</p>
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-[84px_1fr] items-center gap-4 rounded border-2 border-[#0b0610] bg-black/24 p-2 shadow-[0_0_0_2px_rgba(255,212,92,0.18)]">
+                    <Image src={avatarImage(activeUser.avatar)} alt="" width={96} height={120} className="battle-lobby-avatar h-24 w-20 object-contain" />
+                    <div>
+                      <p className="font-pixel text-[13px] leading-6 text-white">{activeUser.username || 'Shield Agent'}</p>
+                      <p className="text-sm font-bold text-white/60">{activeUser.rank}</p>
+                      <p className="mt-2 text-xs font-black uppercase text-teal">You - {roomRole === 'guest' ? 'Guest Lane' : 'Host Lane'}</p>
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    'grid grid-cols-[84px_1fr] items-center gap-4 rounded border-2 border-[#0b0610] p-2 shadow-[0_0_0_2px_rgba(255,212,92,0.18)]',
+                    ally ? 'bg-[#211329]' : 'bg-black/18 opacity-75',
+                  )}>
+                    <div className="grid h-24 w-20 place-items-center">
+                      {ally ? (
+                        <Image src={avatarImage(ally.avatar)} alt="" width={96} height={120} className="battle-lobby-avatar battle-lobby-avatar-ally h-24 w-20 object-contain" />
+                      ) : (
+                        <span className="grid h-16 w-16 place-items-center border-4 border-[#0b0610] bg-[#2d1544] font-pixel text-2xl text-gold shadow-[0_0_0_2px_#9b6427]">?</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-pixel text-[12px] leading-6 text-white">{ally?.username || 'Waiting for Friend'}</p>
+                      <p className="text-sm font-bold text-white/60">{ally ? 'Ready in lobby' : 'Share or enter a room code'}</p>
+                      <p className="mt-2 text-xs font-black uppercase text-gold">{ally ? '10 separate questions' : 'Friend avatar appears here'}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="mt-5 grid gap-3">
@@ -399,6 +605,13 @@ export default function BattlefieldPage() {
                   <button type="button" onClick={createRoom} className="pixel-button-gold px-5 py-4 text-[12px] leading-5">
                     Join a Friend
                   </button>
+                </div>
+                <div className={cn(
+                  'mt-4 border-2 border-[#0b0610] px-4 py-3 text-sm font-black leading-6 shadow-[0_0_0_2px_#9b6427]',
+                  ally ? 'bg-[#173626] text-[#dfffe6]' : 'bg-black/32 text-white/62',
+                )}>
+                  <span className="font-pixel text-[9px] uppercase leading-5 text-gold">{ally ? 'Friend Joined' : 'Lobby Indicator'}</span>
+                  <p>{ally ? `${ally.username} is linked. Enemy HP ${enemyMaxHP}, x${coOpDamageMultiplier} damage, ${coOpQuestionCount} questions each.` : 'Create or join a room to activate co-op battle rules.'}</p>
                 </div>
               </section>
 
@@ -442,7 +655,10 @@ export default function BattlefieldPage() {
                 {battleEnemies.map((item) => (
                   <EnemyCard
                     key={item.id}
+                    coOpActive={coOpActive}
                     enemy={item}
+                    maxHP={getBattleEnemyMaxHP(item, coOpActive)}
+                    questionCount={coOpActive ? coOpQuestionCount : item.questions.length}
                     selected={item.id === enemy.id}
                     onSelect={() => selectEnemy(item.id)}
                   />
@@ -473,10 +689,17 @@ export default function BattlefieldPage() {
                 <Image src={avatarIconImage(activeUser.avatar)} alt="" width={82} height={96} className="h-20 w-auto object-contain" />
               </div>
               <div>
-                <h1 className="font-pixel text-base leading-7 text-white">Shield Agent</h1>
+                <h1 className="font-pixel text-base leading-7 text-white">{activeUser.username || 'Shield Agent'}</h1>
                 <div className="mt-2">
                   <HealthMeter current={playerHP} max={playerMaxHP} tone="green" />
                 </div>
+                {ally ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase text-white/70">
+                    <Image src={avatarIconImage(ally.avatar)} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                    <span>{ally.username} joined</span>
+                    <span className="border border-[#ffd45c]/60 bg-[#ffd45c] px-2 py-1 font-pixel text-[7px] leading-3 text-[#241025]">x2 DMG</span>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -490,7 +713,7 @@ export default function BattlefieldPage() {
                 <p className="text-right font-pixel text-[8px] uppercase leading-4 text-gold">Selected Enemy</p>
                 <h2 className="text-right font-pixel text-base leading-7 text-white">{enemy.name}</h2>
                 <div className="mt-2">
-                  <HealthMeter current={enemyHP} max={enemy.maxHP} tone="red" />
+                  <HealthMeter current={enemyHP} max={enemyMaxHP} tone="red" />
                 </div>
               </div>
               <div className="pixel-panel-light grid h-20 w-20 place-items-center overflow-hidden p-1">
@@ -526,6 +749,12 @@ export default function BattlefieldPage() {
               <p className="font-pixel text-[10px] leading-5 sm:text-[11px] sm:leading-6">{question.questionText}</p>
             </div>
 
+            {ally ? (
+              <div className="absolute left-1/2 top-[92px] z-20 w-[min(520px,88vw)] -translate-x-1/2 border-2 border-[#0b0610] bg-[#211329]/94 px-3 py-2 text-center font-pixel text-[8px] leading-4 text-gold shadow-[0_0_0_2px_#9b6427]">
+                Your lane {questionIndex + 1}/{questions.length} - {ally.username} has a separate {allyQuestions.length}-question set
+              </div>
+            ) : null}
+
             <div className="absolute left-[15%] top-20 z-20 hidden w-[min(390px,30vw)] lg:block">
               <div className="pixel-panel min-h-16 p-3">
                 <p className="font-pixel text-[10px] leading-5 text-white/78">{feedback ? feedback.explanation : question.scenarioSubtitle}</p>
@@ -534,7 +763,21 @@ export default function BattlefieldPage() {
 
             <div className="battle-duel-grid mx-auto w-full max-w-4xl">
               <div className="battle-fighter-slot battle-fighter-slot-player">
-                <div className="battle-fighter-stage">
+                <div className={cn('battle-fighter-stage', ally && 'battle-fighter-stage-coop')}>
+                  {ally ? (
+                    <Image
+                      src={avatarFightingImage(ally.avatar)}
+                      alt=""
+                      width={300}
+                      height={300}
+                      priority
+                      className={cn(
+                        'battle-fighter-sprite battle-fighter-ally',
+                        attackSide === 'player' && 'battle-fighter-ally-attack',
+                        attackSide === 'enemy' && 'battle-fighter-hit',
+                      )}
+                    />
+                  ) : null}
                   <Image
                     src={avatarFightingImage(activeUser.avatar)}
                     alt=""
