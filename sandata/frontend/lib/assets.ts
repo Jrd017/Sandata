@@ -167,62 +167,44 @@ export const ui = {
   },
 };
 
-export function avatarImage(avatar?: string) {
-  if (avatar?.startsWith('/assets/')) return avatar;
+type CharacterPose = 'standing' | 'fighting' | 'profile';
+type CharacterAssets = typeof ui.characters.boy1;
 
-  const map: Record<string, string> = {
-    character_1: ui.characters.boy1.standing,
-    character_2: ui.characters.girl1.standing,
-    character_3: ui.characters.boy2.standing,
-    character_4: ui.characters.girl2.standing,
-    character_5: ui.characters.girl1.standing,
-  };
-  return map[avatar || 'character_1'] || ui.characters.boy1.standing;
+const characterAliases: Array<{ assets: CharacterAssets; keys: string[] }> = [
+  {
+    assets: ui.characters.boy1,
+    keys: ['character_1', ui.avatars.barong, ui.avatarIcons.barong, ui.mascots.barong, ...Object.values(ui.characters.boy1)],
+  },
+  {
+    assets: ui.characters.girl1,
+    keys: ['character_2', 'character_5', ui.avatars.heroine, ui.avatars.adventurer, ui.avatarIcons.heroine, ui.avatarIcons.adventurer, ui.mascots.heroine, ui.mascots.adventurer, ...Object.values(ui.characters.girl1)],
+  },
+  {
+    assets: ui.characters.boy2,
+    keys: ['character_3', ui.avatars.knight, ui.avatarIcons.salakot, ui.mascots.knight, ...Object.values(ui.characters.boy2)],
+  },
+  {
+    assets: ui.characters.girl2,
+    keys: ['character_4', ui.avatars.traditional, ui.avatarIcons.traditional, ui.mascots.traditional, ...Object.values(ui.characters.girl2)],
+  },
+];
+
+function avatarPose(avatar: string | undefined, pose: CharacterPose) {
+  const key = avatar || 'character_1';
+  const character = characterAliases.find((item) => item.keys.includes(key))?.assets || ui.characters.boy1;
+  return character[pose];
+}
+
+export function avatarImage(avatar?: string) {
+  return avatarPose(avatar, 'standing');
 }
 
 export function avatarIconImage(avatar?: string) {
-  if (avatar?.startsWith('/assets/ui/icons/avatars/')) return avatar;
-  if (avatar?.startsWith('/assets/characters v2/')) return avatar;
-
-  const standingMap: Record<string, string> = {
-    [ui.avatars.barong]: ui.characters.boy1.profile,
-    [ui.avatars.heroine]: ui.characters.girl1.profile,
-    [ui.avatars.knight]: ui.characters.boy2.profile,
-    [ui.avatars.traditional]: ui.characters.girl2.profile,
-    [ui.avatars.adventurer]: ui.characters.girl1.profile,
-  };
-  if (avatar && standingMap[avatar]) return standingMap[avatar];
-
-  const map: Record<string, string> = {
-    character_1: ui.characters.boy1.profile,
-    character_2: ui.characters.girl1.profile,
-    character_3: ui.characters.boy2.profile,
-    character_4: ui.characters.girl2.profile,
-    character_5: ui.characters.girl1.profile,
-  };
-  return map[avatar || 'character_1'] || ui.characters.boy1.profile;
+  return avatarPose(avatar, 'profile');
 }
 
 export function avatarFightingImage(avatar?: string) {
-  if (avatar?.startsWith('/assets/characters v2/')) return avatar;
-
-  const standingMap: Record<string, string> = {
-    [ui.avatars.barong]: ui.characters.boy1.fighting,
-    [ui.avatars.heroine]: ui.characters.girl1.fighting,
-    [ui.avatars.knight]: ui.characters.boy2.fighting,
-    [ui.avatars.traditional]: ui.characters.girl2.fighting,
-    [ui.avatars.adventurer]: ui.characters.girl1.fighting,
-  };
-  if (avatar && standingMap[avatar]) return standingMap[avatar];
-
-  const map: Record<string, string> = {
-    character_1: ui.characters.boy1.fighting,
-    character_2: ui.characters.girl1.fighting,
-    character_3: ui.characters.boy2.fighting,
-    character_4: ui.characters.girl2.fighting,
-    character_5: ui.characters.girl1.fighting,
-  };
-  return map[avatar || 'character_1'] || ui.characters.boy1.fighting;
+  return avatarPose(avatar, 'fighting');
 }
 
 export const avatarChoices = [

@@ -7,10 +7,10 @@ import { useRouter } from 'next/navigation';
 import { MusicToggle } from '@/components/MusicToggle';
 import { Navbar } from '@/components/Navbar';
 import api from '@/lib/api';
-import { battleEnemies, fallbackMissions, fallbackModules, getLevelProgress } from '@/lib/data';
+import { fallbackMissions, fallbackModules, getLevelProgress } from '@/lib/data';
 import { getDailyTip, scamTips, type DailyTip } from '@/lib/dailyTips';
 import type { LearningModule, Mission } from '@/lib/types';
-import { avatarFightingImage, avatarImage, categoryImage, ui } from '@/lib/assets';
+import { avatarImage, categoryImage, ui } from '@/lib/assets';
 import { useStore } from '@/store/useStore';
 
 function MiniHealth({ value, tone = 'green' }: { value: number; tone?: 'green' | 'red' }) {
@@ -81,7 +81,6 @@ export default function DashboardPage() {
   const levelMax = activeUser.levelXPGoal ?? Math.max(1, xp.next - xp.current);
   const levelPercent = Math.round((levelValue / Math.max(levelMax, 1)) * 100);
   const recommended = useMemo(() => (modules.length ? modules : fallbackModules).slice(0, 3), [modules]);
-  const previewEnemy = battleEnemies[0];
   const missionRows = [
     ...missions.slice(0, 3),
     { id: 'invite_agent', label: 'Invite a Fellow Agent', target: 1, progress: 0, xp: 50 },
@@ -125,23 +124,30 @@ export default function DashboardPage() {
               <div className="mb-2 flex justify-center">
                 <h2 className="pixel-title-ribbon px-8 py-2 text-[12px] leading-5">Battle Readiness</h2>
               </div>
-              <div className="dashboard-duel-scene bg-[#07101b]/58 px-3 pb-5 pt-3">
-                <div className="text-center">
-                  <p className="font-pixel text-[10px] uppercase text-sky-blue">You</p>
-                  <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
-                    <Image src={avatarFightingImage(activeUser.avatar)} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-player" />
+              <div className="relative overflow-hidden border-2 border-[#4a2b18] bg-[#f6dfad] p-4 text-[#201136] shadow-[inset_0_0_0_3px_rgba(255,255,255,0.26),0_12px_28px_rgba(0,0,0,0.35)]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(116,40,13,0.18),transparent_34%),linear-gradient(90deg,rgba(72,35,12,0.2),transparent_16%,transparent_84%,rgba(72,35,12,0.2))]" />
+                <div className="relative grid items-center gap-4 sm:grid-cols-[76px_minmax(0,1fr)_76px]">
+                  <Image src={ui.menu.scroll} alt="" width={76} height={76} className="mx-auto h-16 w-16 object-contain drop-shadow-[0_8px_0_rgba(62,23,7,0.22)]" />
+                  <div className="min-w-0 text-center">
+                    <p className="font-pixel text-[9px] uppercase leading-5 text-[#8c1f12]">War Chronicle</p>
+                    <h3 className="font-pixel text-[17px] uppercase leading-8 text-[#2a112c] sm:text-[20px]">Get Ready To Fight</h3>
+                    <p className="mx-auto mt-2 max-w-2xl text-sm font-black leading-6 text-[#4a2b18]">
+                      The data realm is under siege. False messengers crawl through the mist, shadow rogues hunt for secret codes, and every wrong click feeds the enemy lines.
+                    </p>
                   </div>
+                  <Image src={ui.menu.swords} alt="" width={76} height={76} className="mx-auto h-16 w-16 object-contain drop-shadow-[0_8px_0_rgba(62,23,7,0.22)]" />
                 </div>
-                <div className="battle-clash dashboard-clash" aria-hidden>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className="text-center">
-                  <p className="font-pixel text-[10px] uppercase text-red-400">{previewEnemy.name}</p>
-                  <div className="battle-fighter-stage dashboard-fighter-stage mt-2">
-                    <Image src={previewEnemy.image} alt="" width={280} height={280} priority className="battle-fighter-sprite battle-fighter-enemy" />
-                  </div>
+                <div className="relative mt-4 grid gap-2 sm:grid-cols-3">
+                  {[
+                    { icon: ui.icons.warning, label: 'War horns awake' },
+                    { icon: ui.shieldLogo, label: 'Shield oath ready' },
+                    { icon: ui.dashboard.flag, label: 'Enemy trail found' },
+                  ].map((item) => (
+                    <div key={item.label} className="flex min-h-14 items-center gap-3 border-2 border-[#4a2b18] bg-[#201136] px-3 py-2 text-left shadow-[inset_0_0_0_2px_rgba(255,255,255,0.1)]">
+                      <Image src={item.icon} alt="" width={34} height={34} className="h-8 w-8 shrink-0 object-contain" />
+                      <span className="font-pixel text-[8px] uppercase leading-4 text-gold">{item.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="mt-7 grid gap-3 sm:grid-cols-2">
