@@ -147,6 +147,9 @@ function EnemyCard({
 export default function BattlefieldPage() {
   const { user, setUser } = useStore();
   const impactAudioRef = useRef<HTMLAudioElement | null>(null);
+  const hurtAudioRef = useRef<HTMLAudioElement | null>(null);
+  const victoryAudioRef = useRef<HTMLAudioElement | null>(null);
+  const defeatAudioRef = useRef<HTMLAudioElement | null>(null);
   const [phase, setPhase] = useState<Phase>('lobby');
   const [selectedEnemyId, setSelectedEnemyId] = useState(battleEnemies[0].id);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -182,17 +185,20 @@ export default function BattlefieldPage() {
 
   useEffect(() => {
     if (!attackSide) return;
-    const timeout = window.setTimeout(() => setAttackSide(null), 680);
+    const timeout = window.setTimeout(() => setAttackSide(null), 820);
     return () => window.clearTimeout(timeout);
   }, [attackSide]);
 
-  function playImpactSound() {
-    const audio = impactAudioRef.current;
+  function playOneShot(audio: HTMLAudioElement | null, volume = 0.9) {
     if (!audio) return;
 
     audio.currentTime = 0;
-    audio.volume = 0.9;
+    audio.volume = volume;
     void audio.play().catch(() => undefined);
+  }
+
+  function playBattleResultSound(outcome: Outcome) {
+    playOneShot(outcome === 'win' ? victoryAudioRef.current : defeatAudioRef.current, 0.95);
   }
 
   function selectEnemy(enemyId: string) {
@@ -279,7 +285,8 @@ export default function BattlefieldPage() {
       explanation: question.explanation || (isCorrect ? 'Your counter lands cleanly.' : 'The attack slips through. Verify before acting.'),
     });
     setAttackSide(isCorrect ? 'player' : 'enemy');
-    playImpactSound();
+    playOneShot(impactAudioRef.current, 0.98);
+    if (!isCorrect) playOneShot(hurtAudioRef.current, 0.88);
 
     const strikeDamage = Math.ceil(enemy.maxHP / questions.length);
     setEnemyHP((current) => Math.max(0, current - (isCorrect ? strikeDamage : 8)));
@@ -333,7 +340,9 @@ export default function BattlefieldPage() {
     const finalRound = questionIndex >= questions.length - 1 || enemyHP <= 0 || playerHP <= 0;
     if (finalRound) {
       const won = enemyHP <= 0 || (correctCount >= Math.ceil(questions.length * 0.67) && playerHP > 0);
-      submitBattle(won ? 'win' : 'loss', correctCount).catch(() => toast.error('Could not submit battle'));
+      const outcome = won ? 'win' : 'loss';
+      playBattleResultSound(outcome);
+      submitBattle(outcome, correctCount).catch(() => toast.error('Could not submit battle'));
       return;
     }
 
@@ -453,6 +462,9 @@ export default function BattlefieldPage() {
     >
       <section className="pixel-screen-border relative mx-auto min-h-[calc(100dvh-2rem)] max-w-[1500px] overflow-hidden bg-transparent">
         <audio ref={impactAudioRef} src={ui.audio.impact} preload="auto" />
+        <audio ref={hurtAudioRef} src={ui.audio.hurt} preload="auto" />
+        <audio ref={victoryAudioRef} src={ui.audio.victory} preload="auto" />
+        <audio ref={defeatAudioRef} src={ui.audio.defeat} preload="auto" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.16))]" />
         <div className="relative z-10 grid min-h-[calc(100dvh-2rem)] grid-rows-[auto_1fr_auto] px-3 py-3 sm:px-6">
           <header className="relative grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px_minmax(0,1fr)] lg:items-start">

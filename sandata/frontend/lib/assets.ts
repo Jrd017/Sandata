@@ -161,6 +161,9 @@ export const ui = {
     battlefield: '/assets/audio/medieval-battlefield.wav',
     battlefieldFight: '/assets/audio/medieval-battlefield-fight.wav',
     impact: '/assets/audio/impact-8bit.wav',
+    hurt: '/assets/audio/hurt-8bit.wav',
+    victory: '/assets/audio/victory-8bit.wav',
+    defeat: '/assets/audio/defeat-8bit.wav',
   },
 };
 
