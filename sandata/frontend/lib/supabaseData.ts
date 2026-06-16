@@ -105,12 +105,15 @@ export async function registerWithSupabase(username: string, email: string, pass
 
   if (error) throw error;
   if (!data.user) throw new Error('Unable to create Supabase user.');
+  if (!data.session) {
+    return { needsEmailConfirmation: true as const };
+  }
 
   const user = await getOrCreateProfile(data.user.id, data.user.email || email, username);
   return {
-    token: data.session?.access_token || '',
+    token: data.session.access_token,
     user,
-    needsEmailConfirmation: !data.session,
+    needsEmailConfirmation: false as const,
   };
 }
 

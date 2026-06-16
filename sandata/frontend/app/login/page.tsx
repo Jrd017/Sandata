@@ -72,6 +72,15 @@ function Corner({ position }: { position: 'top-left' | 'top-right' | 'bottom-lef
   return <span aria-hidden className={cn('auth-corner', `auth-corner-${position}`)} />;
 }
 
+function getAuthErrorMessage(err: unknown) {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const responseError = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+    if (responseError) return responseError;
+  }
+  if (err instanceof Error) return err.message;
+  return undefined;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { setToken, setUser } = useStore();
@@ -108,17 +117,19 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (hasSupabaseConfig) {
-        const result = mode === 'register'
-          ? await registerWithSupabase(username, email, password)
-          : await signInWithSupabase(email, password);
-
-        if ('needsEmailConfirmation' in result && result.needsEmailConfirmation) {
-          toast.success('Account created. Check your email to confirm it.');
-          return;
+        if (mode === 'register') {
+          const result = await registerWithSupabase(username, email, password);
+          if (result.needsEmailConfirmation) {
+            toast.success('Account created. Check your email to confirm it.');
+            return;
+          }
+          setToken(result.token);
+          setUser(result.user);
+        } else {
+          const result = await signInWithSupabase(email, password);
+          setToken(result.token);
+          setUser(result.user);
         }
-
-        setToken(result.token);
-        setUser(result.user);
       } else {
         const payload = mode === 'register' ? { username, email, password } : { email, password };
         const { data } = await api.post(`/auth/${mode}`, payload);
@@ -128,10 +139,7 @@ export default function LoginPage() {
       toast.success(mode === 'register' ? 'Account created' : 'Welcome back');
       router.push('/dashboard');
     } catch (err: unknown) {
-      const message = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : undefined;
-      toast.error(message || 'Unable to sign in');
+      toast.error(getAuthErrorMessage(err) || (mode === 'register' ? 'Unable to create account' : 'Unable to sign in'));
     } finally {
       setLoading(false);
     }
